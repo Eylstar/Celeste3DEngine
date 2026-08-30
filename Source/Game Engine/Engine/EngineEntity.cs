@@ -4,8 +4,15 @@ using Monocle;
 using Celeste.Mod.Entities;
 using FontStashSharp;
 using Microsoft.Xna.Framework;
+using MonoMod.ModInterop;
 
 namespace Celeste.Mod.Celeste3DEngine;
+
+[ModImportName("SpeedrunTool.SaveLoad")]
+internal static class SpeedrunToolImports
+{
+    public static Action<Entity, bool> IgnoreSaveState;
+}
 
 /// <summary> The Celeste Entity that represent the Core Engine. Manages Scene Loading and Core logic </summary>
 [Tracked(true)]
@@ -15,7 +22,7 @@ public sealed class EngineEntity : Entity
     static EngineEntity instance = null;
     static bool initialized;
     
-    static bool persistent;
+    static bool persistent = false;
     static string modelsPath, texturesPath, exportsPath, fontsPath, audioPath;
     
     internal static Scene3D Current3DScene;
@@ -25,8 +32,8 @@ public sealed class EngineEntity : Entity
     public delegate void EngineLoadDelegate(EngineEntity engine, Scene scene);
     /// <summary> Event invoked when the EngineEntity is added to a scene </summary>
     public static event EngineLoadDelegate OnEngineLoad;
-    
 
+    /// <summary> (Celeste Lonn Entity Constructor) Creates a new EngineEntity with the specified paths and persistence </summary>
     public EngineEntity(EntityData data, Vector2 offset) : base(data.Position + offset)
     {
         modelsPath = data.Attr("modelsPath");
@@ -34,18 +41,24 @@ public sealed class EngineEntity : Entity
         exportsPath = data.Attr("exportsPath");
         fontsPath = data.Attr("fontsPath");
         audioPath = data.Attr("audioPath");
-        
+
         EnginePaths.SetAllPathsCtr(modelsPath, texturesPath, exportsPath, fontsPath, audioPath);
-        persistent = data.Bool("persistent", true);
+        persistent = data.Bool("persistent", false);
         Visible = true;
+        
+        SpeedrunToolImports.IgnoreSaveState?.Invoke(this, true);
     }
     
     
-    internal EngineEntity(string m, string t, string e, string f, string a, bool p) : base(Vector2.Zero)
+    
+    /// <summary> Creates a new EngineEntity with the specified paths and persistence </summary>
+    public EngineEntity(string m, string t, string e, string f, string a, bool p)
     {
         EnginePaths.SetAllPathsCtr(m, t, e, f, a);
         persistent = p;
         Visible = true;
+        
+        SpeedrunToolImports.IgnoreSaveState?.Invoke(this, true);
     }
     
     public override void Added(Scene scene)
@@ -58,9 +71,13 @@ public sealed class EngineEntity : Entity
             RemoveSelf();
             return;
         }
-        
+        IndempotentLoad();
+        OnEngineLoad?.Invoke(this, scene);
+    }
+
+    internal void IndempotentLoad()
+    {
         instance = this;
-        
         if (initialized) return;
         initialized = true;
         
@@ -72,8 +89,6 @@ public sealed class EngineEntity : Entity
             EngineFonts.LoadAllFonts();
         
         ShadersLoader.LoadShaders();
-        
-        OnEngineLoad?.Invoke(this, scene);
     }
     
     /// <summary> Loads a new 3D scene, unloading the previous one if it exists </summary>
@@ -106,9 +121,9 @@ public sealed class EngineEntity : Entity
         if (instance != null)
         {
             if (persist)
-                instance.Tag |= Tags.Persistent;
+                instance.Tag |= Tags.Global;
             else
-                instance.Tag &= ~Tags.Persistent;
+                instance.Tag &= ~Tags.Global;
         }
     }
 
@@ -129,11 +144,11 @@ public sealed class EngineEntity : Entity
     public override void Removed(Scene scene)
     {
         base.Removed(scene);
-        if (instance == this)
+        if (instance == this && !persistent)
         {
             SaveEngineState(scene);
             CleanEngine();
-        }  
+        }
     }
 
     public override void SceneEnd(Scene scene)
@@ -183,11 +198,12 @@ public sealed class EngineEntity : Entity
             mapData.persistentEngine = persistent;
         }
         
-        Logger.Warn("SAVE FLOW", "SAVE ENGINE STATE. Room :" + roomName + " Map: " + mapName);
+        //Logger.Warn("SAVE FLOW", "SAVE ENGINE STATE. Room :" + roomName + " Map: " + mapName);
     }
     
     internal static void CleanEngine()
     {
+        Logger.Info("EngineEntity", "Cleaning");
         initialized = false;
         OnEngineLoad = null;
         instance = null;

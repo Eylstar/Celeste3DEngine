@@ -8,8 +8,10 @@ using Monocle;
 
 namespace Celeste.Mod.Celeste3DEngine;
 
+/// <summary> Renders Text in Overlay or World Space. Needs to be added into a UICanvas </summary>
 public class TextRenderer : IDisposable
 {
+    /// <summary> The TextData that contains all the information about the text to render. You can modify this data to change the text, color, position, etc. </summary>
     public TextData textData = new TextData();
     
     // OVERLAY RENDERING
@@ -21,7 +23,6 @@ public class TextRenderer : IDisposable
     
     SpriteBatchRenderer spriteBatchRenderer = new SpriteBatchRenderer();
     
-    
     // WORLD RENDERING
     
     VertexBuffer vertexBuffer;
@@ -32,26 +33,28 @@ public class TextRenderer : IDisposable
     int quadCount;
     int shadowQuadCount;
     
-    
+    /// <summary> Creates a new TextRenderer with the default font "Renogare" </summary>
     public TextRenderer() : this("Renogare") { }
     
+    /// <summary> Creates a new TextRenderer with the default font "Renogare" and the specified TextData </summary>
     public TextRenderer(TextData data) : this("Renogare", data) { }
     
-    
+    /// <summary> Creates a new TextRenderer with the specified font name. If the font is not found, it will use the default font "Renogare" </summary>
     public TextRenderer(string fontName)
     {
         font = EngineFonts.Get(fontName);
         dynFont = font?.GetFont(textData.fontSize) ?? EngineFonts.GetDefault().GetFont(textData.fontSize);
         textData.onDirty += () => isDirty = true;
-        textData.onFontSizeChanged = size => dynFont = font?.GetFont(size) ?? EngineFonts.GetDefault().GetFont(size);
+        textData.onFontSizeChanged += size => dynFont = font?.GetFont(size) ?? EngineFonts.GetDefault().GetFont(size);
     }
     
+    /// <summary> Creates a new TextRenderer with the specified font name and TextData. If the font is not found, it will use the default font "Renogare" </summary>
     public TextRenderer(string fontName, TextData data) : this(fontName)
     {
         SetData(data);
     }
     
-
+    /// <summary> Sets the font of the TextRenderer. If the font is not found, it will set the default font </summary>
     public void SetFont(string fontName)
     {
         CustomFont temp = EngineFonts.Get(fontName);
@@ -65,11 +68,12 @@ public class TextRenderer : IDisposable
         }
     }
         
+    /// <summary> Sets the TextData of the TextRenderer. This will replace the previous TextData and update the font size if necessary </summary>
     public void SetData(TextData data)
     { 
         textData = data;
         textData.onDirty += () => isDirty = true;
-        textData.onFontSizeChanged = size => dynFont = font?.GetFont(size) ?? EngineFonts.GetDefault().GetFont(size);
+        textData.onFontSizeChanged += size => dynFont = font?.GetFont(size) ?? EngineFonts.GetDefault().GetFont(size);
         dynFont = font?.GetFont(this.textData.fontSize) ?? EngineFonts.GetDefault().GetFont(this.textData.fontSize);
     }
 
@@ -283,6 +287,7 @@ public class TextRenderer : IDisposable
         }
     }
     
+    /// <summary> Disposes of the TextRenderer and its resources. </summary>
     public void Dispose()
     {
         vertexBuffer?.Dispose();

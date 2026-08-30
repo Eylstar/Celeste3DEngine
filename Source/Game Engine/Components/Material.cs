@@ -1,4 +1,5 @@
-﻿using Microsoft.Xna.Framework;
+﻿using System;
+using Microsoft.Xna.Framework;
 using Monocle;
 
 namespace Celeste.Mod.Celeste3DEngine;
@@ -10,22 +11,31 @@ public class Material
     public Vector3 DiffuseColor = Vector3.One;
     
     /// <summary> Color of the material under specular lighting </summary>
-    public Vector3 SpecularColor = Vector3.One;
+    public Vector3 SpecularColor = Vector3.Zero;
     
     /// <summary> Shininess of the material (higher values result in smaller, sharper specular highlights) </summary>
-    public float Shininess = 3f;
+    public float Shininess = 32f;
     
     /// <summary> Whether the material is affected by lighting </summary>
     public bool isLit = true;
     
-    /// <summary> Tint color applied to the material, only used when isLit is false </summary>
-    public Vector3 tint = Vector3.One;
+    /// <summary> Tint color applied to the material </summary>
+    public Vector3 Color = Vector3.One;
     
     /// <summary> Emissive color of the material (the color it appears to emit, unaffected by lighting) </summary>
     public Vector3 EmissiveColor = Vector3.Zero;
     
     /// <summary> Emissive intensity of the material (multiplies the emissive color) </summary>
     public float EmissiveIntensity = 0f;
+
+    
+    /// <summary> Fallback value here for backwards compatibility </summary>
+    [Obsolete("Retro compatibility value only. Use Material.Color instead", false)]
+    public Vector3 tint
+    {
+        get => Color;
+        set => Color = value;
+    }
     
     
     internal static readonly Material DefaultMaterial = new Material();
@@ -37,7 +47,9 @@ public class Material
         SpecularColor = mat.SpecularColor;
         Shininess = mat.Shininess;
         isLit = mat.isLit;
-        tint = mat.tint;
+        Color = mat.Color;
+        EmissiveColor = mat.EmissiveColor;
+        EmissiveIntensity = mat.EmissiveIntensity;
     }
 
     /// <summary> Creates a copy of this Material to prevent changes to the original when modifying the copy </summary>
@@ -49,7 +61,9 @@ public class Material
             SpecularColor = this.SpecularColor,
             Shininess = this.Shininess,
             isLit = this.isLit,
-            tint = this.tint
+            Color = this.Color,
+            EmissiveColor = this.EmissiveColor,
+            EmissiveIntensity = this.EmissiveIntensity
         };
     }
 
@@ -68,9 +82,11 @@ public class Material
     internal static void ResetDefaultMaterial()
     {
         DefaultMaterial.DiffuseColor = Vector3.One;
-        DefaultMaterial.SpecularColor = Vector3.One;
-        DefaultMaterial.Shininess = 3f;
+        DefaultMaterial.SpecularColor = Vector3.Zero;
+        DefaultMaterial.Shininess = 32f;
         DefaultMaterial.isLit = true;
-        DefaultMaterial.tint = Vector3.One;
+        DefaultMaterial.Color = Vector3.One;
+        DefaultMaterial.EmissiveColor = Vector3.Zero;
+        DefaultMaterial.EmissiveIntensity = 0f;
     }
 }

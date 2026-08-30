@@ -41,22 +41,37 @@ public class FloorHeightMap
     }
     
     /// <summary> Builds a heightmap from the given mesh. </summary>
-    public static FloorHeightMap BuildHeightmapFromMesh(GameObject obj, int resolutionX = 256, int resolutionZ = 256) 
+    public static FloorHeightMap BuildHeightmapFromMesh(GameObject obj, int resolutionX = 256, int resolutionZ = 256)
     {
-        MeshData objMesh = obj?.GetComponent<MeshRenderer>()?.GetModel()?.GetMesh();
+        if (obj.GetComponent<MeshRenderer>() == null)
+        {
+            Logger.Warn("FloorHeightMap", $"GameObject '{obj.name}' does not have a MeshRenderer component. Cannot build heightmap.");
+            return null;
+        }
+        MeshData objMesh = obj.GetComponent<MeshRenderer>().GetModel()?.GetMesh();
         
         if (objMesh == null) return null;
         
-        VertexPositionNormalTexture[] verts = objMesh.verts;
+        Transform t = obj.transform;
+        Matrix worldMatrix = Matrix.CreateScale(t.scale) * 
+                             Matrix.CreateFromQuaternion(t.rotation) * 
+                             Matrix.CreateTranslation(t.position);
+        
+        VertexPositionNormalTexture[] rawVerts = objMesh.verts;
+        Vector3[] verts = new Vector3[rawVerts.Length];
+        
+        for (int i = 0; i < rawVerts.Length; i++)
+        {
+            verts[i] = Vector3.Transform(rawVerts[i].Position, worldMatrix);
+        }
 
         float minX = float.PositiveInfinity;
         float maxX = float.NegativeInfinity;
         float minZ = float.PositiveInfinity;
         float maxZ = float.NegativeInfinity;
 
-        foreach (VertexPositionNormalTexture v in verts)
+        foreach (Vector3 p in verts)
         {
-            Vector3 p = v.Position;
             if (p.X < minX) minX = p.X;
             if (p.X > maxX) maxX = p.X;
             if (p.Z < minZ) minZ = p.Z;
@@ -81,9 +96,9 @@ public class FloorHeightMap
 
         for (int i = 0; i < verts.Length; i += 3) 
         {
-            Vector3 v0 = verts[i].Position;
-            Vector3 v1 = verts[i + 1].Position;
-            Vector3 v2 = verts[i + 2].Position;
+            Vector3 v0 = verts[i];
+            Vector3 v1 = verts[i + 1];
+            Vector3 v2 = verts[i + 2];
             
             float triMaxY = Math.Max(v0.Y, Math.Max(v1.Y, v2.Y));
 

@@ -6,6 +6,7 @@ using Monocle;
 
 namespace Celeste.Mod.Celeste3DEngine;
 
+/// <summary> Transform component for GameObjects, handles position, rotation and scale in world space </summary>
 public sealed class Transform
 {
     GameObject owner;   
@@ -42,7 +43,7 @@ public sealed class Transform
     internal float Pitch => pitch;
     internal float Roll  => roll;
     
-    
+    /// <summary> Default constructor, position is zero, rotation is identity, scale is one on all axes </summary>
     public Transform()
     {
         position = Vector3.Zero;
@@ -50,28 +51,28 @@ public sealed class Transform
         scale = Vector3.One;
         yaw = pitch = roll = 0f;
     }
-    
+    /// <summary> Creates a Transform with position, rotation in Euler angles in degrees and scale explicitly set </summary>
     public Transform(Vector3 position, Vector3 rotationEuler, Vector3 scale)
     {
         this.position = position;
         this.scale = scale;
         SetRotation(rotationEuler);
     }
-
+    /// <summary> Creates a Transform with position, rotation Quaternion and scale explicitly set </summary>
     public Transform(Vector3 position, Quaternion rotation, Vector3 scale)
     { 
         this.position = position;
         this.scale = scale;
         SetRotation(rotation);
     }
-    
+    /// <summary> Creates a Transform at the given position with an optional rotation in Euler angles in degrees, scale defaults to one on all axes </summary>
     public Transform(Vector3 position, Vector3 rotationEuler = default)
     {
         this.position = position;
         this.scale = Vector3.One;
         SetRotation(rotationEuler);
     }
-
+    /// <summary> Creates a Transform at the given position with the given rotation Quaternion, scale defaults to one on all axes </summary>
     public Transform(Vector3 position, Quaternion rotation)
     { 
         this.position = position;

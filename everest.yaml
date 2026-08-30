@@ -1,5 +1,5 @@
 - Name: Celeste3DEngine
-  Version: 0.2.0
+  Version: 1.1.0
   DLL: bin/Celeste3DEngine.dll
   Dependencies:
     - Name: EverestCore

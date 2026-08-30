@@ -18,6 +18,8 @@ float3 DiffuseColor   = float3(1.0f, 1.0f, 1.0f);
 float3 EmissiveColor  = float3(0.0f, 0.0f, 0.0f);
 float EmissiveIntensity = 1.0f;
 
+float3 TintColor = float3(1.0f, 1.0f, 1.0f);
+
 
 float3 FogColor;
 float FogDensity;
@@ -28,10 +30,12 @@ float NearPlane;
 float FarPlane;
 
 
-float4x4 LightViewProjectionNear;
-float4x4 LightViewProjectionFar;
+//float4x4 LightViewProjectionNear;
+//float4x4 LightViewProjectionFar;
 
-float CascadeSplitDistance;
+float4x4 LightViewProjection;
+
+//float CascadeSplitDistance;
 
 float ShadowBias = 0.001f;
 float ShadowBiasMin = 0.0002f;
@@ -42,22 +46,26 @@ float ShadowStrength = 1.0f;
 
 float ReceivesShadows = 1.0f;
 
-float2 ShadowTexelSizeNear;
-float2 ShadowTexelSizeFar;
+//float2 ShadowTexelSizeNear;
+//float2 ShadowTexelSizeFar;
+
+float2 ShadowTexelSize;
 
 float  ShadowSoftness = 1.5f;
 
-float CascadeBlendWidth = 3.0f;
+//float CascadeBlendWidth = 3.0f;
 
-texture ShadowMapNear;
-texture ShadowMapFar;
+//texture ShadowMapNear;
+//texture ShadowMapFar;
+
+texture ShadowMap;
 
 
 float4x4 BoneMatrices[64];
 bool IsSkinned = false;
 
 
-sampler2D ShadowSamplerNear = sampler_state
+/*sampler2D ShadowSamplerNear = sampler_state
 {
     Texture = <ShadowMapNear>;
     MinFilter = Point;
@@ -70,6 +78,17 @@ sampler2D ShadowSamplerNear = sampler_state
 sampler2D ShadowSamplerFar = sampler_state
 {
     Texture = <ShadowMapFar>;
+    MinFilter = Point;
+    MagFilter = Point;
+    MipFilter = None;
+    AddressU = Clamp;
+    AddressV = Clamp;
+};*/
+
+
+sampler2D ShadowSampler = sampler_state
+{
+    Texture = <ShadowMap>;
     MinFilter = Point;
     MagFilter = Point;
     MipFilter = None;
@@ -111,9 +130,10 @@ struct VSOut
     float3 WorldPos : TEXCOORD0;
     float3 NormalW  : TEXCOORD1;
     float2 TexCoord : TEXCOORD2;
-    float4 LightPosNear  : TEXCOORD3;
-    float4 LightPosFar   : TEXCOORD4;
-    float  ViewDepth     : TEXCOORD5;
+    //float4 LightPosNear  : TEXCOORD3;
+    //float4 LightPosFar   : TEXCOORD4;
+    float4 LightPos   : TEXCOORD3;
+    float  ViewDepth     : TEXCOORD4;
 };
 
 
@@ -145,8 +165,9 @@ VSOut VSBase(VSIn input)
 
     o.TexCoord = input.TexCoord;
     
-    o.LightPosNear = mul(worldPos, LightViewProjectionNear);
-    o.LightPosFar  = mul(worldPos, LightViewProjectionFar);
+    //o.LightPosNear = mul(worldPos, LightViewProjectionNear);
+    //o.LightPosFar  = mul(worldPos, LightViewProjectionFar);
+    o.LightPos = mul(worldPos, LightViewProjection);
     o.ViewDepth = -viewPos.z;
     
     return o;
@@ -169,8 +190,9 @@ VSOut VSSkinned(VSInSkinned input)
     o.Position = mul(viewPos, Projection);
     
     o.TexCoord = input.TexCoord;
-    o.LightPosNear = mul(worldPos, LightViewProjectionNear);
-    o.LightPosFar  = mul(worldPos, LightViewProjectionFar);
+    //o.LightPosNear = mul(worldPos, LightViewProjectionNear);
+    //o.LightPosFar  = mul(worldPos, LightViewProjectionFar);
+    o.LightPos = mul(worldPos, LightViewProjection);
     
     o.ViewDepth = -viewPos.z;
     
@@ -247,7 +269,7 @@ float SampleShadowPoisson(sampler2D shadowSampler, float4 lightPos, float2 texel
 }
 
 
-float SampleDirectionalCSM(float3 viewDepth, float3 normalW, float3 lightDir, float4 lightPosNear, float4 lightPosFar)
+/*float SampleDirectionalCSM(float3 viewDepth, float3 normalW, float3 lightDir, float4 lightPosNear, float4 lightPosFar)
 {
     float nearShadow = SampleShadowPoisson(
         ShadowSamplerNear,
@@ -272,7 +294,7 @@ float SampleDirectionalCSM(float3 viewDepth, float3 normalW, float3 lightDir, fl
     );
 
     return lerp(nearShadow, farShadow, blend);
-}
+}*/
 
 
 float ComputeExponentialHeightFog(float viewDepth, float worldY)
@@ -298,17 +320,17 @@ float4 PSBase(VSOut input) : COLOR0
     float spec = pow(saturate(dot(N, H)), Shininess);
     float3 specular = SpecularColor * spec * LightColor * NdotL;
     
-    float shadow = SampleDirectionalCSM(input.ViewDepth, N, L, input.LightPosNear, input.LightPosFar);
+    float shadow = SampleShadowPoisson(ShadowSampler, input.LightPos, ShadowTexelSize, N, L);
     shadow = lerp(1.0f, shadow, saturate(ReceivesShadows));
     
     shadow = NdotL <= 0.0f ? 0.0f : shadow;
 
     float3 tex = tex2D(TextureSampler, input.TexCoord).rgb;
+    float3 albedo = tex  * TintColor;
 
-    float3 color = tex * (AmbientColor + diffuse * shadow) + specular * shadow;
+    float3 color = albedo * (AmbientColor + diffuse * shadow) + specular * shadow;
 
     float fogFactor = ComputeExponentialHeightFog(input.ViewDepth, input.WorldPos.y);
-    color = lerp(color, FogColor, fogFactor);
 
     color = lerp(color, FogColor, fogFactor);
     

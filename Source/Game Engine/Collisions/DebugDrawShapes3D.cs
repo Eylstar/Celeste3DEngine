@@ -5,7 +5,7 @@ using Monocle;
 
 namespace Celeste.Mod.Celeste3DEngine;
 
-/// <summary> Utility class for drawing debug shapes in 3D space (Box & Sphere) </summary>
+/// <summary> Utility class for drawing debug shapes in 3D space (Box and Sphere) </summary>
 public static class DebugDrawShapes3D
 {
     static BasicEffect effect;
@@ -22,9 +22,10 @@ public static class DebugDrawShapes3D
     }
 
     /// <summary> Draws a wireframe box in 3D space </summary>
-    public static void DrawBox(Vector3 center, Vector3 halfSize, Quaternion rotation, Camera3D cam, Color color)
+    public static void DrawBox(Vector3 center, Vector3 size, Quaternion rotation, Camera3D cam, Color color)
     {
         EnsureEffect();
+        Vector3 halfSize = size * 0.5f;
 
         Vector3[] localCorners =
         {

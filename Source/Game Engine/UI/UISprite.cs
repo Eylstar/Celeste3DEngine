@@ -7,6 +7,7 @@ using Monocle;
 
 namespace Celeste.Mod.Celeste3DEngine;
 
+/// <summary> A Sprite that can be drawn in an UICanvas</summary>
 public class UISprite
 {
     string texturePath;
@@ -19,10 +20,15 @@ public class UISprite
     float alpha;
     float rotation;
     
+    /// <summary> The position of the sprite in UI coordinates </summary>
     public Vector2 Position => position;
+    /// <summary> The scale of the sprite in UI coordinates </summary>
     public Vector2 Scale => scale;
+    /// <summary> The color/tint of the sprite </summary>
     public Color Color => color;
+    /// <summary> The transparency of the sprite </summary>
     public float Alpha => alpha;
+    /// <summary> The rotation of the sprite in degrees </summary>
     public float Rotation => rotation;
     
     
@@ -30,13 +36,31 @@ public class UISprite
     IndexBuffer indexBuffer;
     int quadCount;
 
-    public float pixelPerUnit = 200f;
+    float _pixelPerUnit = 200f;
+    
+    /// <summary> The number of pixels that correspond to one unit in world space. Default is 200 pixels per unit. </summary>
+    public float pixelPerUnit
+    {
+        get => _pixelPerUnit;
+        set
+        {
+            if (value <= 0f)
+            {
+                Logger.Error("UISprite", "pixelPerUnit must be greater than 0. Value not changed.");
+                return;
+            }
+            _pixelPerUnit = value;
+            dirty = true;
+        }
+    }
     
     internal bool dirty = true;
     
-    public UISprite(string texturePath) : this(texturePath, Vector2.Zero) { }
+    /// <summary> Creates a new UISprite with the specified texture path and default position (0,0) and scale (1,1) </summary>
+    public UISprite(string texturePath) : this(texturePath, Vector2.Zero, Vector2.One) { }
     
-    public UISprite(string texturePath, Vector2 position, Vector2 scale = default, Color? color = null, float alpha = 1f, float rotation = 0f)
+    /// <summary> Creates a new UISprite with the specified texture path and position </summary>
+    public UISprite(string texturePath, Vector2 position, Vector2 scale, Color? color = null, float alpha = 1f, float rotation = 0f)
     {
         this.texturePath = texturePath;
         this.position = position;
@@ -49,26 +73,35 @@ public class UISprite
         vTexture = TexturesCache.Get(fullPath);
     }
     
+    /// <summary> Sets the position of the sprite in UI coordinates </summary>
     public void SetPosition(Vector2 newPos)
     {
         position = newPos;
         dirty = true;
     }
+    
+    /// <summary> Sets the scale of the sprite in UI coordinates </summary>
     public void SetScale(Vector2 newScale)
     {
         scale = newScale;
         dirty = true;
     }
+    
+    /// <summary> Sets the color/tint of the sprite </summary>
     public void SetColor(Color newColor)
     {
         color = newColor;
         dirty = true;
     }
+    
+    /// <summary> Sets the transparency of the sprite </summary>
     public void SetAlpha(float newAlpha)
     {
         alpha = newAlpha;
         dirty = true;
     }
+    
+    /// <summary> Sets the rotation of the sprite in degrees </summary>
     public void SetRotation(float newRotation)
     {
         rotation = newRotation;
@@ -100,8 +133,8 @@ public class UISprite
         Vector3 up = canvasTransform.Up;
         Vector3 center = canvasTransform.Position + right * position.X * uniformScale - up * position.Y * uniformScale;
         
-        float halfWidth = (texture.Width * scale.X) /  pixelPerUnit / 2f * uniformScale;
-        float halfHeight = (texture.Height * scale.Y) / pixelPerUnit / 2f * uniformScale;
+        float halfWidth = (texture.Width * scale.X) /  _pixelPerUnit / 2f * uniformScale;
+        float halfHeight = (texture.Height * scale.Y) / _pixelPerUnit / 2f * uniformScale;
         
         Vector3[] vertices = new Vector3[4]
         {

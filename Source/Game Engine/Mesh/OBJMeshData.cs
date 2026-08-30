@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Text;
 
 namespace Celeste.Mod.Celeste3DEngine;
@@ -31,6 +32,8 @@ internal sealed class OBJMeshData : MeshData, IDisposable
             using BinaryReader reader = new BinaryReader(stream, Encoding.UTF8);
             
             int vertexCount = reader.ReadInt32();
+            
+            Logger.Info("3DEngine", $"Parsing exported mesh '{meshName}' with {vertexCount} vertices");
 
             for (int i = 0; i < vertexCount; i++)
             {
@@ -145,6 +148,7 @@ internal sealed class OBJMeshData : MeshData, IDisposable
                 }
             }
         }
+        
         if (verticesWithNormals.Count == 0)
             Logger.Error("3DEngine", $"No vertices generated for '{meshName}'. posCount={positions.Count}, uvCount={texcoords.Count}");
         
@@ -161,24 +165,30 @@ internal sealed class OBJMeshData : MeshData, IDisposable
         if (!anyValidNormal)
             ComputeFlatNormals(verticesWithNormals);
         
-        // Compute bounding sphere radius
-        Vector3 center = Vector3.Zero;
-        foreach (var v in verticesWithNormals)
-            center += v.Position;
-        center /= verticesWithNormals.Count;
-
-        float maxDistSq = 0f;
-        foreach (var v in verticesWithNormals)
-        {
-            float dSq = Vector3.DistanceSquared(v.Position, center);
-            if (dSq > maxDistSq) maxDistSq = dSq;
-        }
-        objMesh.boundingSphereRadius = MathF.Sqrt(maxDistSq);
+        var (center, radius) = ComputeBoundingSphere(verticesWithNormals.Select(v => v.Position).ToList());
+        objMesh.boundingSphereCenter = center;
+        objMesh.boundingSphereRadius = radius;
         
         
         objMesh.verts = verticesWithNormals.ToArray();
         objMesh.ResetVertexBuffer();
         return objMesh;
+    }
+    
+    static (Vector3 center, float radius) ComputeBoundingSphere(List<Vector3> vertPositions)
+    {
+        Vector3 center = Vector3.Zero;
+        foreach (Vector3 p in vertPositions)
+            center += p;
+        center /= vertPositions.Count;
+        
+        float maxDistSq = 0f;
+        foreach (var p in vertPositions)
+        {
+            float dSq = Vector3.DistanceSquared(p, center);
+            if (dSq > maxDistSq) maxDistSq = dSq;
+        }
+        return (center, MathF.Sqrt(maxDistSq));
     }
     
     public static OBJMeshData CreateFromStream(Stream stream, string fileName)

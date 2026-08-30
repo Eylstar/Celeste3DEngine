@@ -1,4 +1,5 @@
 ﻿using System;
+using Monocle;
 
 namespace Celeste.Mod.Celeste3DEngine;
 
@@ -20,24 +21,26 @@ internal class LoadingHooks
         if (engine != null || saveData == null) return;
         
         string mapName = level.Session.Area.SID;
-        string roomName = level.Session.Level;
+        //string roomName = level.Session.Level;
         
         Celeste3DEngineModuleSaveData.MapSaveData saveDataForMap = saveData.mapSaveDataList.Find(m => m.mapName == mapName);
 
         // If there is no save data for this map, don't do anything
         if (saveDataForMap == null) return;
+        
 
-        if (saveDataForMap.needToRespawnEngine && saveDataForMap.leftRoom == roomName)
+        if (saveDataForMap.needToRespawnEngine/* && saveDataForMap.leftRoom == roomName*/)
         {
             // Respawn the engine with the saved data
             saveDataForMap.needToRespawnEngine = false;
             engine = new EngineEntity(saveDataForMap.modelPath, saveDataForMap.texturePath, saveDataForMap.exportPath, saveDataForMap.fontPath, saveDataForMap.audioPath, saveDataForMap.persistentEngine);
             level.Add(engine);
+            engine.IndempotentLoad();
             
             // If a callback was set by the mapper, call it and reset the flag
             if (saveDataForMap.needToCallBack)
             {
-                if (EngineCallbacks.TryGetCallback(saveDataForMap.callBackID, out Action<EngineEntity, Level> callback))
+                if (EngineCallbacks.TryGetCallback(saveDataForMap.callBackID, out Action<EngineEntity, Scene> callback))
                 {
                     saveDataForMap.needToCallBack = false;
                     callback.Invoke(engine, level);

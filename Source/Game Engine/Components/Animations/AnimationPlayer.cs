@@ -1,14 +1,22 @@
 ﻿using System;
+using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 
 namespace Celeste.Mod.Celeste3DEngine;
 
+internal abstract class CustomAnimation
+{
+    internal string name;
+    internal float duration;
+}
+
+/// <summary> Represents a single animation for a mesh, containing multiple channels for different nodes </summary>
 public sealed class AnimationPlayer : Behaviour
 {
     GLBMeshData meshData;
     
-    CustomAnimation currentAnimation;
-    CustomAnimation toAnimation;
+    MeshAnimation currentAnimation;
+    MeshAnimation toAnimation;
     
     float blendTime = 0f;
     float blendDuration;
@@ -16,6 +24,9 @@ public sealed class AnimationPlayer : Behaviour
     
     float currentTime = 0f;
     internal bool isPlaying = false;
+    
+    /// <summary> Whether an animation is currently playing </summary>
+    public bool IsPlaying => isPlaying;
     
     bool animLoop = true;
     bool toLoop = true;
@@ -90,7 +101,7 @@ public sealed class AnimationPlayer : Behaviour
     /// <summary> Smoothly transitions from the current animation to the specified animation over the given duration. </summary>
     public void CrosseFade(string toAnimName, float duration, bool loop = true)
     {
-        if (meshData == null || !meshData.animationsDictionnary.TryGetValue(toAnimName, out CustomAnimation anim))
+        if (meshData == null || !meshData.animationsDictionnary.TryGetValue(toAnimName, out MeshAnimation anim))
         {
             Logger.Warn("AnimationPlayer", $"MeshData null or animation '{toAnimName}' not found in mesh data. Cannot crossfade to animation.");
             return;
@@ -192,7 +203,7 @@ public sealed class AnimationPlayer : Behaviour
     }
 
     // Computes the local transformation matrices for each node in the hierarchy based on the current animation and time
-    void ComputeLocalMatrices(CustomAnimation anim, float time, GLBNodeHierarchy hierarchy, int count, Matrix[] buffer)
+    void ComputeLocalMatrices(MeshAnimation anim, float time, GLBNodeHierarchy hierarchy, int count, Matrix[] buffer)
     {
         for (int i = 0; i < count; i++)
             buffer[i] = hierarchy.localBindPoses[i];

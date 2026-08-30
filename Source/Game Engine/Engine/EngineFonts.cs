@@ -29,6 +29,7 @@ internal static class EngineFonts
     internal static void LoadAllFonts()
     {
         string fontsPath = EnginePaths.CustomFontsPath;
+        if (fontsPath == null) return;
         if (Everest.Content.TryGet(fontsPath, out ModAsset _ , true))
         {
             foreach (var entry in Everest.Content.Map)

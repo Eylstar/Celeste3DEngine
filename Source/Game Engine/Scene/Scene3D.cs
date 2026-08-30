@@ -43,8 +43,11 @@ public sealed class Scene3D
     
     Skybox skybox = new Skybox();
     
+    /// <summary> Gets the Skybox object used in the scene </summary>
+    public Skybox GetSkybox => skybox;
+    
     internal static AudioListener audioListener = new AudioListener();
-    bool customAudioListenerObject = false;
+    bool customAudioListenerObject;
     GameObject audioListenerObject;
     
     /// <summary> Returns a readOnly list with all GameObjects in the scene </summary>
@@ -58,6 +61,9 @@ public sealed class Scene3D
     
     /// <summary> Decides if the Colliders and Collision Detectors are shown in the scene (Wireframes) </summary>
     public bool debugShowColliders = false;
+    
+    /// <summary> Decides if only the Colliders in range of the Collision Detectors are shown in the scene (Wireframes) </summary>
+    public bool debugShowOnlyCollidersInRange = false;
     
     /// <summary> Decides if the RayCasts performed in the CollisionSystem are shown in the scene (Lines) </summary>
     public bool debugShowRayCasts = false;
@@ -118,7 +124,7 @@ public sealed class Scene3D
     {
         if (go.GetComponent<MeshRenderer>() == null)
         {
-            Logger.Warn("Celeste3DEngine", $"Trying to add a HUD GameObject without a MeshRenderer. Please add a MeshRenderer component to the GameObject before adding it as a HUD object.");
+            Logger.Error("Celeste3DEngine", $"Trying to add a HUD GameObject without a MeshRenderer. Please add a MeshRenderer component to the GameObject before adding it as a HUD object.");
             return;
         }
         go.GetComponent<MeshRenderer>().layer = ModelLayer.HUD;
@@ -328,14 +334,21 @@ public sealed class Scene3D
             {
                 foreach (Behaviour b in go.behaviours)
                     if (b.enabled)
+                    {
+                        /*if (!b.started)
+                        {
+                            b.Start();
+                            b.started = true;
+                        }*/
                         b.Render();
+                    }
             }
         }
         iterationList.Clear();
         
         // Draw debug colliders if enabled
         if (debugShowColliders)
-            collisionSystem.DrawDebugColliders(RenderingCamera);
+            collisionSystem.DrawDebugColliders(RenderingCamera, debugShowOnlyCollidersInRange);
         
         if (debugShowRayCasts)
             collisionSystem.DrawDebugRayCasts(RenderingCamera);
@@ -363,7 +376,12 @@ public sealed class Scene3D
         
         // Destroy all GameObjects in the scene
         foreach (GameObject go in gameObjects)
-            go.Destroy();
+        {
+            if (go is not Skybox)
+                go.Destroy();
+            else
+                (go as Skybox).ForceDestroy();
+        }
         
         pendingStart.Clear();
         startNextFrame.Clear();

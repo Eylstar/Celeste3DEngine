@@ -3,6 +3,7 @@ using Celeste.Mod.Entities;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Monocle;
+using MonoMod.ModInterop;
 
 namespace Celeste.Mod.Celeste3DEngine;
 
@@ -26,6 +27,8 @@ public class Celeste3DEngineModule : EverestModule
 
     public override void Load()
     {
+        typeof(SpeedrunToolImports).ModInterop();
+        
         IL.Celeste.Level.Render += RenderingHooks.IL_Level_Render;
         On.Celeste.Level.Render += RenderingHooks.ON_HUD_RenderHD;
 

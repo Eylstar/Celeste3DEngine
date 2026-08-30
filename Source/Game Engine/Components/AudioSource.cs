@@ -14,7 +14,6 @@ public class AudioSource : Behaviour
 {
     SoundEffect effect;
     SoundEffectInstance instance;
-    DynamicSoundEffectInstance dynamicInstance;
     
     /// <summary> The volume of the sound effect, from 0.0 (silent) to 1.0 (full volume) </summary>
     public float volume = 1f;
@@ -22,10 +21,13 @@ public class AudioSource : Behaviour
     /// <summary> Whether the sound effect should loop when it reaches the end </summary>
     public bool loop = false;
     
+    /// <summary> Whether the sound effect should use the Celeste SFX volume or the Music one </summary>
+    public bool useSFXVolumeSetting = true;
+    
     AudioEmitter emitter = new AudioEmitter();
     
     /// <summary> Load a sound effect from the given path. The path should be inside the audio folder and without extension </summary>
-    public void LoadSound(string path, string name = "")
+    public void LoadSound(string path)
     {
         effect = AudioCache.GetSound(path);
     }
@@ -41,7 +43,7 @@ public class AudioSource : Behaviour
         
         instance?.Dispose();
         instance = effect.CreateInstance();
-        instance.Volume = volume;
+        instance.Volume = volume * ((useSFXVolumeSetting ? Settings.Instance.SFXVolume : Settings.Instance.MusicVolume) / 10f);
         instance.IsLooped = loop;
         emitter.Position = transform.Position;
         instance.Apply3D(Scene3D.audioListener, emitter);
@@ -60,7 +62,7 @@ public class AudioSource : Behaviour
         
         emitter.Position = transform.Position;
         instance.Apply3D(Scene3D.audioListener, emitter);
-        instance.Volume = volume;
+        instance.Volume = volume * ((useSFXVolumeSetting ? Settings.Instance.SFXVolume : Settings.Instance.MusicVolume) / 10f);
     }
 
     public override void Removed()
@@ -130,7 +132,7 @@ internal class AudioCache
         }
         else
         {
-            Logger.Warn("AudioCache", $"Failed to load audio asset '{assetPath}'. Make sure the file exists and is in .wav format.");
+            Logger.Warn("AudioCache", $"Failed to load audio asset '{assetPath}'. Make sure the file exists and is in .wav or .ogg format.");
             return null;
         }
     }

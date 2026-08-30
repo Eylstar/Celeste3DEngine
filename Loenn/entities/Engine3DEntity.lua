@@ -11,8 +11,10 @@ sceneEntity.placements =
         exportsPath = "",
         fontsPath = "",
         audioPath = "",
-        persistent = true
+        persistent = false
     }
 }
+
+sceneEntity.texture = "3DGizmo"
 
 return sceneEntity

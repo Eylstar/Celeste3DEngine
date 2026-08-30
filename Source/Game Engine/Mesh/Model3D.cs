@@ -96,7 +96,7 @@ internal sealed class Model3D : IDisposable
     {
         //GLTF
         ModAsset GLTFAsset;
-        string gltfVirt = EnginePaths.customModelsPath + $"/{m}.glb";
+        string gltfVirt = (enginePaths ? EnginePaths.defaultModelsPath : EnginePaths.customModelsPath) + $"/{m}.glb";
         
         if (meshRenderer.format != ModelFormat.OBJ && Everest.Content.TryGet(gltfVirt, out GLTFAsset))
         {
@@ -171,7 +171,8 @@ internal sealed class Model3D : IDisposable
 
     
     // Prepare and render the model before the main scene render pass
-    internal void BeforeRender(Matrix lvpnear, Matrix lvpfar, Texture2D shadowTextureNear, Texture2D shadowTextureFar)
+    //internal void BeforeRender(Matrix lvpnear, Matrix lvpfar, Texture2D shadowTextureNear, Texture2D shadowTextureFar)
+    internal void BeforeRender(Matrix lvp, Texture2D shadowTexture)
     {
         if (objMesh == null || renderingCamera == null) return;
 
@@ -193,7 +194,7 @@ internal sealed class Model3D : IDisposable
         // Set lit shader parameters
         if (modelMaterial.isLit)
         {
-            SetLitParameters(shader, world, lvpnear, lvpfar, shadowTextureNear, shadowTextureFar);
+            SetLitParameters(shader, world, lvp, shadowTexture);
             bool isSkinned = SetupSkinnedParameters(shader);
             shader.CurrentTechnique = isSkinned ? shader.Techniques["SkinnedMesh"] : shader.Techniques["BaseLighting"];
         }
@@ -202,7 +203,7 @@ internal sealed class Model3D : IDisposable
         else if (!modelMaterial.isLit)
         {
             shader.CurrentTechnique = shader.Techniques["UnlitMesh"];
-            shader.Parameters["TintColor"]?.SetValue(modelMaterial.tint);
+            shader.Parameters["TintColor"]?.SetValue(modelMaterial.Color);
         }
         
         
@@ -275,7 +276,7 @@ internal sealed class Model3D : IDisposable
         device.SamplerStates[0] = SamplerState.LinearClamp;
     }
 
-    void SetLitParameters(Effect shader, Matrix world, Matrix lvpnear, Matrix lvpfar, Texture2D shadowTextureNear, Texture2D shadowTextureFar)
+    void SetLitParameters(Effect shader, Matrix world, Matrix lvp, Texture2D shadowTexture)
     {
         //shader.CurrentTechnique = shader.Techniques["BaseLighting"];
             
@@ -289,22 +290,26 @@ internal sealed class Model3D : IDisposable
         
         shader.Parameters["LightDirection"]?.SetValue(lightSettings.DirectionalLightDirection);
         
-        shader.Parameters["LightViewProjectionNear"]?.SetValue(lvpnear);
-        shader.Parameters["LightViewProjectionFar"]?.SetValue(lvpfar);
+        //shader.Parameters["LightViewProjectionNear"]?.SetValue(lvpnear);
+        //shader.Parameters["LightViewProjectionFar"]?.SetValue(lvpfar);
+        shader.Parameters["LightViewProjection"]?.SetValue(lvp);
         
-        shader.Parameters["ShadowMapNear"]?.SetValue(shadowTextureNear);
-        shader.Parameters["ShadowMapFar"]?.SetValue(shadowTextureFar);
-        shader.Parameters["CascadeSplitDistance"]?.SetValue(lightSettings.shadowCascadeSplitDistance);
+        //shader.Parameters["ShadowMapNear"]?.SetValue(shadowTextureNear);
+        //shader.Parameters["ShadowMapFar"]?.SetValue(shadowTextureFar);
+        shader.Parameters["ShadowMap"]?.SetValue(shadowTexture);
         
-        shader.Parameters["ShadowTexelSizeNear"]?.SetValue(new Vector2(1f / (lightSettings.shadowMapResolution * 2), 1f / (lightSettings.shadowMapResolution * 2)));
-        shader.Parameters["ShadowTexelSizeFar"]?.SetValue(new Vector2(1f / (lightSettings.shadowMapResolution / 2), 1f / (lightSettings.shadowMapResolution / 2)));
+        //shader.Parameters["CascadeSplitDistance"]?.SetValue(lightSettings.shadowCascadeSplitDistance);
+        
+        //shader.Parameters["ShadowTexelSizeNear"]?.SetValue(new Vector2(1f / (lightSettings.shadowMapResolution * 2), 1f / (lightSettings.shadowMapResolution * 2)));
+        //shader.Parameters["ShadowTexelSizeFar"]?.SetValue(new Vector2(1f / (lightSettings.shadowMapResolution / 2), 1f / (lightSettings.shadowMapResolution / 2)));
+        shader.Parameters["ShadowTexelSize"]?.SetValue(new Vector2(1f / (lightSettings.shadowMapResolution), 1f / (lightSettings.shadowMapResolution)));
         
         
         shader.Parameters["ShadowBias"]?.SetValue(lightSettings.shadowBias);
         shader.Parameters["ShadowStrength"]?.SetValue(lightSettings.shadowStrength);
         
         shader.Parameters["ReceivesShadows"]?.SetValue(meshRenderer.receivesShadows ? 1f : 0f);
-        shader.Parameters["ShadowSoftness"]?.SetValue(1f);
+        shader.Parameters["ShadowSoftness"]?.SetValue(lightSettings.shadowSoftness);
         
         // Set parameters for ignoring fog objects (skybox and HUD)
         if (ignoreFog)
@@ -342,6 +347,8 @@ internal sealed class Model3D : IDisposable
             
             shader.Parameters["NearPlane"]?.SetValue(lightSettings.shadowNearPlane);
             shader.Parameters["FarPlane"]?.SetValue(lightSettings.shadowFarPlane);
+            
+            shader.Parameters["TintColor"]?.SetValue(modelMaterial.Color);
         }
     }
     
@@ -411,7 +418,7 @@ internal sealed class Model3D : IDisposable
                 lightPassShader.Parameters["ShadowBias"]?.SetValue(lightSettings.shadowBias);
                 
                 lightPassShader.Parameters["ShadowTexelSize"]?.SetValue(new Vector2(1f / lightSettings.spotLightShadowMapResolution, 1f / lightSettings.spotLightShadowMapResolution));
-                lightPassShader.Parameters["ShadowSoftness"]?.SetValue(1.5f); 
+                lightPassShader.Parameters["ShadowSoftness"]?.SetValue(lightSettings.shadowSoftness); 
                 
                 lightPassShader.Parameters["NearPlane"]?.SetValue(lightSettings.shadowNearPlane);
                 lightPassShader.Parameters["FarPlane"]?.SetValue(light.range);
@@ -426,10 +433,13 @@ internal sealed class Model3D : IDisposable
             lightPassShader.Parameters["UseSpot"]?.SetValue(1f);
             
             float halfAngle = MathHelper.ToRadians(cone.Angle) * 0.5f;
+            float fallOff = MathHelper.Clamp(cone.SpotFalloff, 0f, 1f);
+            float innerAngle = halfAngle * (1f - fallOff);
+            
             Vector3 dir = cone.transform.Forward;
             dir.Normalize();
             
-            lightPassShader.Parameters["InnerCos"]?.SetValue(MathF.Cos(halfAngle * 0.5f));
+            lightPassShader.Parameters["InnerCos"]?.SetValue(MathF.Cos(innerAngle));
             lightPassShader.Parameters["OuterCos"]?.SetValue(MathF.Cos(halfAngle));
             lightPassShader.Parameters["LightDir"]?.SetValue(dir);
         }

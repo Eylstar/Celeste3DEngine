@@ -32,14 +32,18 @@ public sealed class Renderer3D : IDisposable
     RenderTarget2D sceneRenderTarget;
     RenderTarget2D foregroundRenderTarget;
     
-    RenderTarget2D shadowRenderTargetNear;
-    RenderTarget2D shadowRenderTargetFar;
+    //RenderTarget2D shadowRenderTargetNear;
+    //RenderTarget2D shadowRenderTargetFar;
+    RenderTarget2D shadowRenderTarget;
     
-    internal Texture2D shadowTextureNear => shadowRenderTargetNear;
-    internal Texture2D shadowTextureFar => shadowRenderTargetFar;
+    //internal Texture2D shadowTextureNear => shadowRenderTargetNear;
+    //internal Texture2D shadowTextureFar => shadowRenderTargetFar;
     
-    internal Matrix lightViewProjMatrixNear;
-    internal Matrix lightViewProjMatrixFar;
+    internal Texture2D shadowTexture => shadowRenderTarget;
+    
+    //internal Matrix lightViewProjMatrixNear;
+    //internal Matrix lightViewProjMatrixFar;
+    internal Matrix lightViewProjMatrix;
     
     LightingSettings lightingSettings => EngineEntity.Current3DScene?.GetLightingSettings();
     
@@ -63,13 +67,15 @@ public sealed class Renderer3D : IDisposable
     
     void CreateShadowMapsRenderTarget()
     {
-        shadowRenderTargetNear?.Dispose();
-        shadowRenderTargetFar?.Dispose();
+        //shadowRenderTargetNear?.Dispose();
+        //shadowRenderTargetFar?.Dispose();
+        shadowRenderTarget?.Dispose();
         
-        int size = lightingSettings != null ? lightingSettings.shadowMapResolution : 2048;
+        int size = lightingSettings != null ? lightingSettings.shadowMapResolution : 4096;
         
-        shadowRenderTargetNear = new RenderTarget2D(Engine.Graphics.GraphicsDevice,size * 2,size * 2,false, SurfaceFormat.Single, DepthFormat.Depth24);
-        shadowRenderTargetFar = new RenderTarget2D(Engine.Graphics.GraphicsDevice,size / 2,size / 2,false, SurfaceFormat.Single, DepthFormat.Depth24);
+        //shadowRenderTargetNear = new RenderTarget2D(Engine.Graphics.GraphicsDevice,size * 2,size * 2,false, SurfaceFormat.Single, DepthFormat.Depth24);
+        //shadowRenderTargetFar = new RenderTarget2D(Engine.Graphics.GraphicsDevice,size / 2,size / 2,false, SurfaceFormat.Single, DepthFormat.Depth24);
+        shadowRenderTarget = new RenderTarget2D(Engine.Graphics.GraphicsDevice,size,size,false, SurfaceFormat.Single, DepthFormat.Depth24);
     }
     
     
@@ -80,7 +86,8 @@ public sealed class Renderer3D : IDisposable
         if (sceneRenderTarget == null || sceneRenderTarget.Width != vp.Width || sceneRenderTarget.Height != vp.Height)
             CreateRenderTarget();
 
-        if (shadowRenderTargetNear == null || shadowRenderTargetFar == null || (lightingSettings != null && (shadowRenderTargetFar.Width != lightingSettings.shadowMapResolution / 2 || shadowRenderTargetNear.Width != lightingSettings.shadowMapResolution * 2)))
+        //if (shadowRenderTargetNear == null || shadowRenderTargetFar == null || (lightingSettings != null && (shadowRenderTargetFar.Width != lightingSettings.shadowMapResolution / 2 || shadowRenderTargetNear.Width != lightingSettings.shadowMapResolution * 2)))
+        if (shadowRenderTarget == null || (lightingSettings != null && (shadowRenderTarget.Width != lightingSettings.shadowMapResolution )))
             CreateShadowMapsRenderTarget();
     }
 
@@ -204,11 +211,8 @@ public sealed class Renderer3D : IDisposable
         // World Models Rendering
         BRWorldModels();
         
-        // Additional Lights Rendering
-        //BRSceneLights();
 
         // UI Canvases and UI Models Rendering
-        BRWorldCanvases();
         BRHUDModels();
         
         ResetDeviceStates();
@@ -223,16 +227,13 @@ public sealed class Renderer3D : IDisposable
         UpdateLightMatrices();
         
         GraphicsDevice device = Engine.Graphics.GraphicsDevice;
-        
         Viewport old = device.Viewport;
         
         device.DepthStencilState = DepthStencilState.Default;
         device.RasterizerState = RasterizerState.CullNone;
         device.BlendState = BlendState.Opaque;
         
-        // Render near cascade shadow map
-        
-        device.SetRenderTarget(shadowRenderTargetNear);
+        /*device.SetRenderTarget(shadowRenderTargetNear);
         device.Viewport = new Viewport(0, 0, shadowRenderTargetNear.Width, shadowRenderTargetNear.Height);
         device.Clear(ClearOptions.Target | ClearOptions.DepthBuffer, Color.White, 1f, 0);
         
@@ -243,8 +244,6 @@ public sealed class Renderer3D : IDisposable
                 m.RenderShadowMap(lightViewProjMatrixNear);
         }
         
-        // Render far cascade shadow map
-        
         device.SetRenderTarget(shadowRenderTargetFar);
         device.Viewport = new Viewport(0, 0, shadowRenderTargetFar.Width, shadowRenderTargetFar.Height);
         device.Clear(ClearOptions.Target | ClearOptions.DepthBuffer, Color.White, 1f, 0);
@@ -254,6 +253,17 @@ public sealed class Renderer3D : IDisposable
             MeshRenderer mr = m.gameObject.GetComponent<MeshRenderer>();
             if (mr != null && m.gameObject.enabled && mr.castsShadows)
                 m.RenderShadowMap(lightViewProjMatrixFar);
+        }*/
+        
+        device.SetRenderTarget(shadowRenderTarget);
+        device.Viewport = new Viewport(0, 0, shadowRenderTarget.Width, shadowRenderTarget.Height);
+        device.Clear(ClearOptions.Target | ClearOptions.DepthBuffer, Color.White, 1f, 0);
+        
+        foreach (Model3D m in ModelsList)
+        {
+            MeshRenderer mr = m.gameObject.GetComponent<MeshRenderer>();
+            if (mr != null && m.gameObject.enabled && mr.castsShadows)
+                m.RenderShadowMap(lightViewProjMatrix);
         }
         
         device.SetRenderTarget(null);
@@ -277,17 +287,18 @@ public sealed class Renderer3D : IDisposable
         dir.Normalize();
         
         float camNear = Math.Max(0.01f, lightingSettings.shadowNearPlane);
-        float split = lightingSettings.shadowCascadeSplitDistance;
+        //float split = lightingSettings.shadowCascadeSplitDistance;
         float camFar = lightingSettings.shadowFarPlane;
         
         // Build matrices for near and far splits of the shadow map
-        lightViewProjMatrixNear = BuildDirectionalCascadeMatrix(cam, dir, camNear, split, shadowRenderTargetNear.Width);
-        lightViewProjMatrixFar = BuildDirectionalCascadeMatrix(cam, dir, split, camFar, shadowRenderTargetFar.Width);
+        //lightViewProjMatrixNear = BuildDirectionalCascadeMatrix(cam, dir, camNear, split, shadowRenderTargetNear.Width);
+        //lightViewProjMatrixFar = BuildDirectionalCascadeMatrix(cam, dir, split, camFar, shadowRenderTargetFar.Width);
+        lightViewProjMatrix = BuildDirectionalShadowMatrix(cam, dir, camNear, camFar, shadowRenderTarget.Width);
     }
 
 
     // Build the matrixs for the directional light (near and far)
-    Matrix BuildDirectionalCascadeMatrix(Camera3D cam, Vector3 lightDir, float cascadeNear, float cascadeFar, float mapSize)
+    Matrix BuildDirectionalShadowMatrix(Camera3D cam, Vector3 lightDir, float cascadeNear, float cascadeFar, float mapSize)
     {
         Vector3[] frustumCornersWS = FrustumHelper.GetFrsutumCorners(cam, cascadeNear, cascadeFar);
         
@@ -308,6 +319,8 @@ public sealed class Renderer3D : IDisposable
             if (dist > radius) radius = dist;
         }
         
+        radius = (float)Math.Ceiling(radius * 16f) / 16f; // Round up to reduce swimming
+        
         // Create light view and projection matrices for orthographic shadow mapping
         Vector3 lightPos = frustumCenter - lightDir * (radius + 100f);
         Matrix lightView = Matrix.CreateLookAt(lightPos, frustumCenter, up);
@@ -325,6 +338,11 @@ public sealed class Renderer3D : IDisposable
         float padding = 50f;
         min.Z -= padding;
         max.Z += padding;
+        
+        min.X = -radius;
+        max.X = radius;
+        min.Y = -radius;
+        max.Y = radius;
         
         float extentX = max.X - min.X;
         float extentY = max.Y - min.Y;
@@ -377,7 +395,7 @@ public sealed class Renderer3D : IDisposable
                 if (mr == null || !m.gameObject.enabled || !mr.castsShadows || m.GetMesh() == null) 
                     continue;
                 
-                Vector3 modelPos = m.gameObject.transform.Position;
+                Vector3 modelPos = GetWorldBoundsCenter(m);
                 float modelRadius = m.GetMesh().boundingSphereRadius * Math.Max(m.gameObject.transform.scale.X, Math.Max(m.gameObject.transform.scale.Y, m.gameObject.transform.scale.Z));
                 float cullDistance = range + modelRadius;
                 
@@ -392,7 +410,7 @@ public sealed class Renderer3D : IDisposable
                 if (mr == null || !m.gameObject.enabled || !mr.castsShadows || m.GetMesh() == null) 
                     continue;
                 
-                Vector3 modelPos = m.gameObject.transform.Position;
+                Vector3 modelPos = GetWorldBoundsCenter(m);
                 float modelRadius = m.GetMesh().boundingSphereRadius * Math.Max(m.gameObject.transform.scale.X, Math.Max(m.gameObject.transform.scale.Y, m.gameObject.transform.scale.Z));
                 float cullDistance = range + modelRadius;
                 
@@ -446,7 +464,8 @@ public sealed class Renderer3D : IDisposable
         Engine.Graphics.GraphicsDevice.Clear(ClearOptions.Target | ClearOptions.DepthBuffer, new Color(0,0,0,0), 1f, 0);
 
         if(sky != null && !sky.foregroundRendererEnabled && skyboxModel.gameObject.enabled)
-            skyboxModel?.BeforeRender(lightViewProjMatrixNear, lightViewProjMatrixFar, shadowTextureNear, shadowTextureFar);
+            skyboxModel?.BeforeRender(lightViewProjMatrix, shadowTexture);
+            //skyboxModel?.BeforeRender(lightViewProjMatrixNear, lightViewProjMatrixFar, shadowTextureNear, shadowTextureFar);
         
         foreach (Model3D m in ModelsList)
         {
@@ -456,17 +475,21 @@ public sealed class Renderer3D : IDisposable
             {
                 Vector3 s = m.gameObject.transform.scale;
                 float max = Math.Max(s.X, Math.Max(s.Y, s.Z));
-                BoundingSphere sphere = new BoundingSphere(m.gameObject.transform.Position, m.GetMesh().boundingSphereRadius * max);
+                BoundingSphere sphere = new BoundingSphere(GetWorldBoundsCenter(m), m.GetMesh().boundingSphereRadius * max);
                 if (frustum.Contains(sphere) == ContainmentType.Disjoint)
                 {
                     continue;
                 }
             }
             
-            m.BeforeRender(lightViewProjMatrixNear, lightViewProjMatrixFar, shadowTextureNear, shadowTextureFar);
+            //m.BeforeRender(lightViewProjMatrixNear, lightViewProjMatrixFar, shadowTextureNear, shadowTextureFar);
+            m.BeforeRender(lightViewProjMatrix, shadowTexture);
         }
         
         ApplyLightToModels(ModelsList);
+        
+        BRWorldCanvases(false);
+        
         
         //Foreground RenderTarget
 
@@ -474,7 +497,8 @@ public sealed class Renderer3D : IDisposable
         Engine.Graphics.GraphicsDevice.Clear(ClearOptions.Target | ClearOptions.DepthBuffer, new Color(0,0,0,0), 1f, 0);
         
         if(sky != null && sky.foregroundRendererEnabled && skyboxModel.gameObject.enabled)
-            skyboxModel?.BeforeRender(lightViewProjMatrixNear, lightViewProjMatrixFar, shadowTextureNear, shadowTextureFar);
+            skyboxModel?.BeforeRender(lightViewProjMatrix, shadowTexture);
+            //skyboxModel?.BeforeRender(lightViewProjMatrixNear, lightViewProjMatrixFar, shadowTextureNear, shadowTextureFar);
 
         foreach (Model3D m in ForegroundModels)
         {
@@ -484,17 +508,20 @@ public sealed class Renderer3D : IDisposable
             {
                 Vector3 s = m.gameObject.transform.scale;
                 float max = Math.Max(s.X, Math.Max(s.Y, s.Z));
-                BoundingSphere sphere = new BoundingSphere(m.gameObject.transform.Position, m.GetMesh().boundingSphereRadius * max);
+                BoundingSphere sphere = new BoundingSphere(GetWorldBoundsCenter(m), m.GetMesh().boundingSphereRadius * max);
                 if (frustum.Contains(sphere) == ContainmentType.Disjoint)
                 {
                     continue;
                 }
             }
             
-            m.BeforeRender(lightViewProjMatrixNear, lightViewProjMatrixFar, shadowTextureNear, shadowTextureFar);
+            //m.BeforeRender(lightViewProjMatrixNear, lightViewProjMatrixFar, shadowTextureNear, shadowTextureFar);
+            m.BeforeRender(lightViewProjMatrix, shadowTexture);
         }
         
         ApplyLightToModels(ForegroundModels);
+        
+        BRWorldCanvases(true);
     }
     
 
@@ -521,7 +548,7 @@ public sealed class Renderer3D : IDisposable
             {
                 if (m.GetMesh() == null) continue;
                 
-                Vector3 modelPos = m.gameObject.transform.Position;
+                Vector3 modelPos = GetWorldBoundsCenter(m);
                 float modelRadius = m.GetMesh().boundingSphereRadius * Math.Max(m.gameObject.transform.scale.X, Math.Max(m.gameObject.transform.scale.Y, m.gameObject.transform.scale.Z));
                 float cullDistance = light.range + modelRadius;
 
@@ -537,11 +564,11 @@ public sealed class Renderer3D : IDisposable
     
     
     // Renders all world space UI canvases to the scene render target
-    void BRWorldCanvases()
+    void BRWorldCanvases(bool isForeground)
     {
         foreach (UICanvas canvas in HUDCanvases)
         {
-            if (canvas != null && canvas.canvasType == CanvasType.WorldSpace)
+            if (canvas != null && canvas.canvasType == CanvasType.WorldSpace && canvas.isRendererInForeground == isForeground)
                 canvas.RenderTexts();
         }
     }
@@ -554,7 +581,8 @@ public sealed class Renderer3D : IDisposable
 
         foreach (Model3D c in HUDModelsList)
             if (c.gameObject.enabled)
-                c.BeforeRender(lightViewProjMatrixNear, lightViewProjMatrixFar, shadowTextureNear, shadowTextureFar);
+                //c.BeforeRender(lightViewProjMatrixNear, lightViewProjMatrixFar, shadowTextureNear, shadowTextureFar);
+                c.BeforeRender(lightViewProjMatrix, shadowTexture);
     }
     
     
@@ -616,9 +644,11 @@ public sealed class Renderer3D : IDisposable
 
         foreach (UICanvas canvas in HUDCanvases)
         {
-            if (canvas == null || canvas.GetTextRenderers().Count == 0) continue;
-            if (canvas.canvasType == CanvasType.Overlay)
-                canvas.RenderTexts();
+            if (canvas != null && (canvas.GetTextRenderers().Count != 0 || canvas.GetUISprites().Count != 0))
+            {
+                if (canvas.canvasType == CanvasType.Overlay)
+                    canvas.RenderTexts();
+            }
         }
     }
     
@@ -677,6 +707,16 @@ public sealed class Renderer3D : IDisposable
             spotLightShadowMaps.Remove(light);
         }
     }
+
+
+    static Vector3 GetWorldBoundsCenter(Model3D m)
+    {
+        var t = m.gameObject.transform;
+        Vector3 localCenter = m.GetMesh().boundingSphereCenter;
+        
+        Matrix worldMatrix = Matrix.CreateScale(t.scale) * Matrix.CreateFromQuaternion(t.rotation) * Matrix.CreateTranslation(t.Position);
+        return Vector3.Transform(localCenter, worldMatrix);
+    }
     
     
     public void Dispose()
@@ -692,8 +732,9 @@ public sealed class Renderer3D : IDisposable
         
         sceneRenderTarget?.Dispose();
         foregroundRenderTarget?.Dispose();
-        shadowRenderTargetNear?.Dispose();
-        shadowRenderTargetFar?.Dispose();
+        //shadowRenderTargetNear?.Dispose();
+        //shadowRenderTargetFar?.Dispose();
+        shadowRenderTarget?.Dispose();
         
         foreach (var kvp in spotLightShadowMaps)
             kvp.Value.Dispose();

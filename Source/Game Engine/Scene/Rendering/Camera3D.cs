@@ -5,11 +5,12 @@ using Monocle;
 
 namespace Celeste.Mod.Celeste3DEngine;
 
+/// <summary> A 3D Camera GameObject that provides view and projection matrices for rendering. </summary>
 public class Camera3D : GameObject
 {
     
     /// <summary> Field of View in Degrees </summary>
-    public float FOV = MathHelper.ToRadians(60f);
+    public float FOV = 60f;
     /// <summary> Near Clipping Plane </summary>
     public float Near = 0.1f;
     /// <summary> Far Clipping Plane </summary>
@@ -25,14 +26,23 @@ public class Camera3D : GameObject
     internal Matrix OrthographicProjection { get; private set; }
     
     
+    /// <summary> Creates a new Camera3D with default position, rotation, and scale. </summary>
     public Camera3D() { }
     
+    /// <summary> Creates a new Camera3D with the specified position and rotation. </summary>
     public Camera3D(Vector3 position, Vector3 rotation, string name = "") : base(position, rotation, Vector3.One, name) { }
 
+    /// <summary> Creates a new Camera3D with the specified position, rotation, and field of view. </summary>
+    public Camera3D(Vector3 position, Vector3 rotation, float FOV, string name = "") : this(position, rotation, name)
+    {
+        this.FOV = FOV;
+    }
+
+    /// <summary> Creates a new Camera3D with the specified position, rotation, field of view, near plane, and far plane. </summary>
     public Camera3D(Vector3 position, Vector3 rotationEuler, float FOV = 60f, float Near = 0.1f, float Far = 500f, string name = "")
         : this(position, rotationEuler, name)
     {
-        this.FOV = MathHelper.ToRadians(FOV);
+        this.FOV = FOV;
         this.Near = Near;
         this.Far = Far;
     }
@@ -52,7 +62,7 @@ public class Camera3D : GameObject
 
     internal void UpdateMatrices(Viewport viewport)
     {
-        Projection = Matrix.CreatePerspectiveFieldOfView(FOV, viewport.AspectRatio, Near, Far);
+        Projection = Matrix.CreatePerspectiveFieldOfView(MathHelper.ToRadians(FOV), viewport.AspectRatio, Near, Far);
         View = Matrix.CreateTranslation(-transform.position) *
                Matrix.CreateFromQuaternion(transform.rotation.Conjugated());
         ViewProjection = View * Projection;

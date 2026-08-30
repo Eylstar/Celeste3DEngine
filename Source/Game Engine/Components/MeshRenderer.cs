@@ -21,6 +21,12 @@ public class MeshRenderer
     
     internal ModelLayer layer;
     
+    /// <summary> Returns the layer of this Model </summary>
+    public ModelLayer GetLayer() => layer;
+    
+    /// <summary> Returns the format of this Model </summary>
+    public ModelFormat GetFormat() => format;
+    
     /// <summary> Whether this Model casts shadows. Default true </summary>
     public bool castsShadows = true;
     
@@ -104,7 +110,7 @@ public class MeshRenderer
     public void SetMaterial(Material mat) => material = mat ?? Material.DefaultMaterial;
 }
 
-enum ModelFormat
+public enum ModelFormat
 {
     OBJ,
     GLTF,

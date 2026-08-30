@@ -14,10 +14,8 @@ internal sealed class GLBNodeHierarchy
 
 
 // Animation data for GLB files
-internal sealed class CustomAnimation
+internal sealed class MeshAnimation : CustomAnimation
 {
-    internal string name;
-    internal float duration;
     internal List<AnimationTimeline> channels = new();
 }
 
@@ -37,4 +35,3 @@ internal struct Keyframe<T>
     internal float time;
     internal T value;
 }
-

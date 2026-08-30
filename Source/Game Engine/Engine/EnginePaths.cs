@@ -1,5 +1,6 @@
 ﻿namespace Celeste.Mod.Celeste3DEngine;
 
+/// <summary> Contains the paths for the engine to load models, textures, exports, fonts, and audio from </summary>
 public static class EnginePaths
 {
     internal static string customModelsPath = "";
@@ -12,6 +13,7 @@ public static class EnginePaths
     internal static string defaultExportsPath = "Graphics/3DEngine/DefaultExports";
     internal static string defaultShaderPath = "Graphics/3DEngine/DefaultShaders/";
     internal static string defaultFontsPath = "Graphics/3DEngine/DefaultFonts";
+    internal static string defaultModelsPath = "Graphics/3DEngine/DefaultModels";
     
     
     /// <summary> The internal default path for Engine Textures </summary>
@@ -22,6 +24,9 @@ public static class EnginePaths
     
     /// <summary> The internal default path for Engine Fonts </summary>
     public static string DefaultFontsPath => defaultFontsPath;
+    
+    /// <summary> The internal default path for Engine Models </summary>
+    public static string DefaultModelsPath => defaultModelsPath;
 
     
     /// <summary> The user defined path for custom models </summary>
@@ -44,7 +49,7 @@ public static class EnginePaths
     public static void SetAllPaths(string mod, string tex, string exp, string fon, string aud)
     {
         SetAllPathsCtr(mod, tex, exp, fon, aud);
-        if (fon != "") 
+        if (!string.IsNullOrEmpty(fon)) 
             EngineFonts.LoadAllFonts();
     }
     
@@ -55,6 +60,9 @@ public static class EnginePaths
         customExportsPath = exp;
         customFontsPath = fon;
         customAudioPath = aud;
+
+        if (!string.IsNullOrEmpty(fon))
+            EngineFonts.LoadAllFonts();
     }
     
     /// <summary> Resets all paths to empty strings</summary>

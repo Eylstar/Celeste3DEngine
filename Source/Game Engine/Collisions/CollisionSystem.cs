@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Microsoft.Xna.Framework;
 
 namespace Celeste.Mod.Celeste3DEngine;
@@ -258,7 +259,7 @@ internal class CollisionSystem
         activeColliders.Clear();
         
         // Loop through each GameObject with collision detectors and check for collisions
-        foreach (GameObject obj in collisionObjects)
+        foreach (GameObject obj in collisionObjects.ToList())
         {
             if (obj == null || obj.destroyed) continue;
             
@@ -266,12 +267,16 @@ internal class CollisionSystem
             collidersToCheck.Clear();
 
             // Populate collidersToCheck with colliders within range of the detector position
-            foreach (CollisionDetector detector in obj.collisionDetectors)
+            foreach (CollisionDetector detector in obj.collisionDetectors.Where(det => det.enabled))
+            {
+                if (obj.destroyed) break;
                 colliderSpatialHashGrid.Query(detector.position, detector.distanceToCheck, collidersToCheck, true);
+            }
 
             // Check collisions for each detector against the colliders found in range
-            foreach (CollisionDetector detector in obj.collisionDetectors)
+            foreach (CollisionDetector detector in obj.collisionDetectors.Where(detector => detector.enabled))
             {
+                if (obj.destroyed) break;
                 float distanceToCheck = detector.distanceToCheck;
                 float distanceToCheckCollisionSquared = distanceToCheck * distanceToCheck;
                 
@@ -279,6 +284,7 @@ internal class CollisionSystem
                 
                 foreach (Collider3D col in collidersToCheck)
                 {
+                    if (obj.destroyed) break;
                     if (col == null || (col.gameObject != null && col.gameObject.destroyed)) continue;
                     
                     // Don't check collision with itself
@@ -344,8 +350,10 @@ internal class CollisionSystem
                         }
                     }
                 }
-                // Handle trigger exits for colliders not seen this frame
                 
+                if (obj.destroyed) break;
+                
+                // Handle trigger exits for colliders not seen this frame
                 List<Collider3D> toExit = null;
                 foreach (var kv in detector.colliderTriggerStateLastFrame)
                 {
@@ -373,14 +381,24 @@ internal class CollisionSystem
     }
     
     // Draw debug shapes for active colliders in the scene
-    internal void DrawDebugColliders(Camera3D cam)
+    internal void DrawDebugColliders(Camera3D cam, bool onlyActive)
     {
-        Logger.Error("CollisionSystem", $"Active colliders count: {activeColliders.Count}, Colliders to check count: {collidersToCheck.Count}");
-        foreach (Collider3D col in activeColliders)
+        if(onlyActive)
         {
-            if (col == null || col.gameObject == null || col.gameObject.destroyed) continue;
-            if (col.isDistanceActive)
+            foreach (Collider3D col in activeColliders)
+            {
+                if (col == null || col.gameObject == null || col.gameObject.destroyed) continue;
+                if (col.isDistanceActive)
+                    col.DrawShapeDebug(cam);
+            }
+        }
+        else
+        {
+            foreach (Collider3D col in colliders)
+            {
+                if (col == null || col.gameObject == null || col.gameObject.destroyed) continue;
                 col.DrawShapeDebug(cam);
+            }
         }
 
         foreach (GameObject colliding in collisionObjects)

@@ -21,6 +21,12 @@ public class UICanvas : GameObject
     /// <summary> Returns a ReadOnly List of all the TextRenderers on this Canvas </summary>
     public IReadOnlyList<TextRenderer> GetTextRenderers() => textRenderers;
     
+    /// <summary> Returns a ReadOnly List of all the UISprites on this Canvas </summary>
+    public IReadOnlyList<UISprite> GetUISprites() => uiSprites;
+
+    /// <summary> Only active if the canvasType is WorldSpace. Decides wether this should be drawn in the world or foreground render taret ///</summary>
+    public bool isRendererInForeground = false;
+    
     Effect textShader;
 
     internal override void Start()
@@ -176,6 +182,8 @@ public class UICanvas : GameObject
 /// <summary> Types of UICanvas. Overlay is drawn on top of everything, WorldSpace is drawn in the 3D world </summary>
 public enum CanvasType
 {
+    /// <summary> Draws the UI in front of everything </summary>
     Overlay, 
+    /// <summary> Draws the UI in the 3D world </summary>
     WorldSpace
 }

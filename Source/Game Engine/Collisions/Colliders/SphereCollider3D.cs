@@ -3,31 +3,35 @@ using Microsoft.Xna.Framework;
 
 namespace Celeste.Mod.Celeste3DEngine;
 
+/// <summary> A 3D sphere collider </summary>
 public class SphereCollider3D : Collider3D
 {
+    /// <summary> Radius of the sphere collider in local space </summary>
     public float radius;
+    
+    internal float scaledRadius => radius * Math.Max(gameObject.transform.scale.X, Math.Max(gameObject.transform.scale.Y, gameObject.transform.scale.Z));
 
+    /// <summary> Creates a new SphereCollider3D with a radius and center offset </summary>
     public SphereCollider3D(float radius, Vector3 center, bool isTrigger = false, bool enabled = true) : base(isTrigger, enabled)
     {
         this.radius = radius;
         this.center = center;
     }
 
-    internal override bool CheckOverlap(Vector3 camPos)
+    /// <summary> Checks if a point in world space is overlapping with this sphere collider </summary>
+    public override bool CheckOverlap(Vector3 camPos)
     {
         if (gameObject == null) return false;
         
-        float scaledRadius = radius * Math.Max(gameObject.transform.scale.X, Math.Max(gameObject.transform.scale.Y, gameObject.transform.scale.Z));
         Vector3 diff = camPos - WorldCenter;
         return diff.LengthSquared() < scaledRadius * scaledRadius;
     }
     
-    internal override void CheckCollision(ref Vector3 objPos, Vector3 prevPos)
+    /// <summary> Checks if a point in world space is colliding with this sphere collider and adjusts the position to resolve the collision </summary>
+    public override void CheckCollision(ref Vector3 objPos, Vector3 prevPos)
     {
         if (gameObject == null) return;
-
-        float scaledRadius = radius * Math.Max(gameObject.transform.scale.X, Math.Max(gameObject.transform.scale.Y, gameObject.transform.scale.Z));
-
+        
         Vector3 toCam = objPos - WorldCenter;
         float dist = toCam.Length();
 
@@ -51,13 +55,12 @@ public class SphereCollider3D : Collider3D
         }
     }
 
-    internal override bool RayCast(Vector3 rayOrigin, Vector3 rayDirection, float maxDistance, out RaycastHit hit)
+    /// <summary> Checks if a ray intersects with this sphere collider and returns the hit information </summary>
+    public override bool RayCast(Vector3 rayOrigin, Vector3 rayDirection, float maxDistance, out RaycastHit hit)
     {
         hit = null;
         if (gameObject == null || rayDirection == Vector3.Zero || maxDistance <= 0f) return false;
-
-        float scaledRadius = radius * Math.Max(gameObject.transform.scale.X, Math.Max(gameObject.transform.scale.Y, gameObject.transform.scale.Z));
-
+        
         Vector3 oc = rayOrigin - WorldCenter;
         float a = Vector3.Dot(rayDirection, rayDirection);
         float b = 2f * Vector3.Dot(oc, rayDirection);
@@ -80,32 +83,17 @@ public class SphereCollider3D : Collider3D
         return true;
     }
 
-    internal override void DrawShapeDebug(Camera3D cam)
+    /// <summary> Draws the sphere collider in debug mode </summary>
+    public override void DrawShapeDebug(Camera3D cam)
     {
         if (gameObject == null) return;
-        
-        float scaledRadius = radius * Math.Max(gameObject.transform.scale.X, Math.Max(gameObject.transform.scale.Y, gameObject.transform.scale.Z));
         DebugDrawShapes3D.DrawSphere(WorldCenter, scaledRadius, cam, Color.Blue);
     }
 
-    internal override float GetBroadphaseRadius()
+    /// <summary> Returns the radius of the sphere collider for broadphase collision detection </summary>
+    public override float GetBroadphaseRadius()
     {
         if (gameObject == null) return radius;
-        return radius * Math.Max(gameObject.transform.scale.X, Math.Max(gameObject.transform.scale.Y, gameObject.transform.scale.Z));
+        return scaledRadius;
     }
-    
-    internal override float GetPointDistanceSquared(Vector3 p)
-    {
-        if (gameObject == null) return float.PositiveInfinity;
-
-        float scaledRadius = radius * Math.Max(gameObject.transform.scale.X, Math.Max(gameObject.transform.scale.Y, gameObject.transform.scale.Z));
-
-        Vector3 d = p - WorldCenter;
-        float len = d.Length();
-
-        float dist = len - scaledRadius;
-        if (dist <= 0f) return 0f;
-
-        return dist * dist;
-    }
-}
+} 

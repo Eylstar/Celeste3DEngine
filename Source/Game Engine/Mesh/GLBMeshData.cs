@@ -33,7 +33,7 @@ internal sealed class GLBMeshData : MeshData
     internal List<CustomPrimitive> primitives = new();
     
     internal GLBNodeHierarchy nodeHierarchy;
-    internal Dictionary<string, CustomAnimation> animationsDictionnary = new();
+    internal Dictionary<string, MeshAnimation> animationsDictionnary = new();
     
     string name;
     
@@ -66,6 +66,8 @@ internal sealed class GLBMeshData : MeshData
         if (stream.CanSeek) stream.Seek(0, SeekOrigin.Begin);
         
         GLBMeshData meshData = new GLBMeshData();
+        
+        List<VertexPositionNormalTexture> allVerts = new();
         
         GraphicsDevice device = Engine.Instance.GraphicsDevice;
         
@@ -115,6 +117,16 @@ internal sealed class GLBMeshData : MeshData
                 Texture2D t = ExtractTexture(gltfPrim, loadedTextures);
                 
                 CreateVertexTypeData();
+                
+                for (int k = 0; k < indices.Count; k++)
+                {
+                    int idx = (int)indices[k];
+                    if (isSkinned)
+                        allVerts.Add(SkinnedVertex.ToVPNT(skinnedVertices[idx]));
+                    else
+                        allVerts.Add(staticVertices[idx]);
+                }
+                
                 BindGPUValues();
                 CreatePrimitive();
                 
@@ -209,7 +221,7 @@ internal sealed class GLBMeshData : MeshData
         foreach (Animation anim in model.LogicalAnimations)
         {
             Logger.Info("GLBMeshData", $"Processing animation '{anim.Name}' with {anim.Channels.Count} channels.");
-            CustomAnimation glbanim = new CustomAnimation {name = anim.Name ?? $"Anim_{anim.LogicalIndex}"};
+            MeshAnimation glbanim = new MeshAnimation {name = anim.Name ?? $"Anim_{anim.LogicalIndex}"};
             float maxTime = 0f;
 
             //Create a new Timeline for every animation Channel (move rotate or scale)
@@ -294,7 +306,11 @@ internal sealed class GLBMeshData : MeshData
             meshData.nodeHierarchy = hierarchy;
         }
         
-        meshData.boundingSphereRadius = getBoundingSphereRadius(vertPositions);
+        var (center, radius) = ComputeBoundingSphere(vertPositions);
+        meshData.boundingSphereRadius = radius;
+        meshData.boundingSphereCenter = center;
+
+        meshData.verts = allVerts.ToArray();
         
         return meshData;
     }
@@ -319,7 +335,7 @@ internal sealed class GLBMeshData : MeshData
         return result;
     }
     
-    static float getBoundingSphereRadius(List<Vector3> vertPositions)
+    static (Vector3 center, float radius) ComputeBoundingSphere(List<Vector3> vertPositions)
     {
         Vector3 center = Vector3.Zero;
         foreach (Vector3 p in vertPositions)
@@ -332,7 +348,7 @@ internal sealed class GLBMeshData : MeshData
             float dSq = Vector3.DistanceSquared(p, center);
             if (dSq > maxDistSq) maxDistSq = dSq;
         }
-        return MathF.Sqrt(maxDistSq);
+        return (center, MathF.Sqrt(maxDistSq));
     }
 
     // Extract base color texture from material, or create 1x1 texture from base color factor if texture is missing
@@ -492,4 +508,9 @@ internal struct SkinnedVertex : IVertexType
     );
     
     VertexDeclaration IVertexType.VertexDeclaration => VertexDeclaration;
+    
+    internal static VertexPositionNormalTexture ToVPNT(SkinnedVertex skinnedVertex)
+    {
+        return new VertexPositionNormalTexture(skinnedVertex.Position, skinnedVertex.Normal, skinnedVertex.UV);
+    }
 }

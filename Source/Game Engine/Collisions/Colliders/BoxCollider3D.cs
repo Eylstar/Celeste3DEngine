@@ -5,24 +5,69 @@ using Monocle;
 
 namespace Celeste.Mod.Celeste3DEngine;
 
+/// <summary> A 3D box collider </summary>
 public class BoxCollider3D : Collider3D
 {
-    public Vector3 size;
-    public float angleRotation;
+    internal Vector3 _size;
+
+    /// <summary> Size of the box collider in local space </summary>
+    public Vector3 size
+    {
+        get => _size;
+        set
+        {
+            _size = value;
+            if (gameObject != null && gameObject.scene != null)
+                gameObject.scene.collisionSystem?.MarkColliderDirty(this);
+        }
+    }
+    
+    //internal float _angleRotation;
+
+    /// <summary> Rotation of the box collider around the Y axis in degrees </summary>
+    /*public float angleRotation
+    {
+        get => _angleRotation;
+        set
+        {
+            _angleRotation = value;
+            if (gameObject != null && gameObject.scene != null)
+                gameObject.scene.collisionSystem?.MarkColliderDirty(this);
+        }
+    }*/
+
+    internal Vector3 _rotation;
+    
+    /// <summary> Rotation of the box collider in local space (Euler angles in degrees) </summary>
+    public Vector3 rotation
+    {
+        get => _rotation;
+        set
+        {
+            _rotation = value;
+            if (gameObject != null && gameObject.scene != null)
+                gameObject.scene.collisionSystem?.MarkColliderDirty(this);
+        }
+    }
     
     Vector3 cachedHalfSize;
     Quaternion cachedFinalRotation;
     Quaternion cachedInvRot;
 
-    public BoxCollider3D(Vector3 size, Vector3 center, float rotation = 0f, bool isTrigger = false, bool enabled = true) : base(isTrigger, enabled)
+    /// <summary> Creates a new BoxCollider3D with a single rotation around the Y axis </summary>
+    public BoxCollider3D(Vector3 size, Vector3 center, float rotation = 0f, bool isTrigger = false, bool enabled = true) : this(size, center, new Vector3(0,rotation,0), isTrigger, enabled) { }
+    
+    /// <summary> Creates a new BoxCollider3D with a size scale and rotation </summary>
+    public BoxCollider3D(Vector3 size, Vector3 center, Vector3 rotation, bool isTrigger = false, bool enabled = true) : base(isTrigger, enabled)
     {
         this.size = size;
         this.center = center;
-        angleRotation = rotation;
+        this.rotation = rotation;
     }
     
 
-    internal override bool CheckOverlap(Vector3 camPos)
+    /// <summary> Checks if a point in world space is overlapping with this box collider </summary>
+    public override bool CheckOverlap(Vector3 camPos)
     {
         if (gameObject == null) return false;
         
@@ -32,7 +77,8 @@ public class BoxCollider3D : Collider3D
         return inside;
     }
 
-    internal override void CheckCollision(ref Vector3 objPos, Vector3 prevPos)
+    /// <summary> Checks if a point in world space is colliding with this box collider and adjusts the position to resolve the collision </summary>
+    public override void CheckCollision(ref Vector3 objPos, Vector3 prevPos)
     {
         if (gameObject == null) return;
         
@@ -65,12 +111,12 @@ public class BoxCollider3D : Collider3D
         
         Transform t = gameObject.transform;
         cachedHalfSize = (size * t.scale) * 0.5f;
-        Quaternion localRot = Quaternion.CreateFromAxisAngle(Vector3.Up, MathHelper.ToRadians(angleRotation));
-        cachedFinalRotation = Quaternion.Normalize(t.rotation * localRot);
+        cachedFinalRotation = Quaternion.Normalize(t.rotation * GetLocalRot);
         cachedInvRot = Quaternion.Conjugate(cachedFinalRotation);
     }
 
-    internal override bool RayCast(Vector3 rayOrigin, Vector3 rayDirection, float maxDistance, out RaycastHit hit)
+    /// <summary> Checks if a ray intersects with this box collider and returns the hit information </summary>
+    public override bool RayCast(Vector3 rayOrigin, Vector3 rayDirection, float maxDistance, out RaycastHit hit)
     {
         hit = null;
         
@@ -157,25 +203,25 @@ public class BoxCollider3D : Collider3D
         return tMin <= tMax;
     }
 
-    internal override void DrawShapeDebug(Camera3D cam)
+    /// <summary> Draws the box collider in debug draw mode </summary>
+    public override void DrawShapeDebug(Camera3D cam)
     {
         if (gameObject == null) return;
         
-        Vector3 halfSize = (size * gameObject.transform.scale) * 0.5f;
-        if (halfSize.X <= 0f || halfSize.Y <= 0f || halfSize.Z <= 0f) return;
-        
         Quaternion modelRot = gameObject.transform.rotation;
-        Quaternion localRot = Quaternion.CreateFromAxisAngle(Vector3.Up, MathHelper.ToRadians(angleRotation));
-        Quaternion finalRot = Quaternion.Normalize(modelRot * localRot);
+        Quaternion finalRot = Quaternion.Normalize(modelRot * GetLocalRot);
 
-        DebugDrawShapes3D.DrawBox(WorldCenter, halfSize, finalRot, cam, Color.Red);
+        DebugDrawShapes3D.DrawBox(WorldCenter, size * gameObject.transform.scale, finalRot, cam, Color.Red);
     }
 
-    internal override float GetBroadphaseRadius()
+    /// <summary> Returns the radius of the box collider for broadphase collision detection </summary>
+    public override float GetBroadphaseRadius()
     {
         if (gameObject == null) return 0f;
         return ((size * gameObject.transform.scale) * 0.5f).Length();
     }
+    
+    Quaternion GetLocalRot => Quaternion.CreateFromYawPitchRoll(MathHelper.ToRadians(rotation.Y), MathHelper.ToRadians(rotation.X), MathHelper.ToRadians(rotation.Z));
     
     internal override float GetPointDistanceSquared(Vector3 p)
     {

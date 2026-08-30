@@ -25,8 +25,10 @@ public class TextData
     private int _fontSize = 16;
     private int _pixelsPerUnit = 300;
     
+    /// <summary> Creates a new TextData with default values </summary>
     public TextData() { }
 
+    /// <summary> Creates a new TextData by copying the values from another TextData </summary>
     public TextData(TextData data)
     {
         _content = data._content;
@@ -153,9 +155,13 @@ public class TextData
     }
 }
 
+/// <summary> Alignment options for text rendering </summary>
 public enum TextAlignment
 {
+    /// <summary> Aligns the text to the left </summary>
     Left,
+    /// <summary> Aligns the text to the center </summary>
     Center,
+    /// <summary> Aligns the text to the right </summary>
     Right
 }

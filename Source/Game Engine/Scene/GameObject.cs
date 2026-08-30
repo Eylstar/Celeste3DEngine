@@ -7,10 +7,17 @@ namespace Celeste.Mod.Celeste3DEngine;
 public partial class GameObject
 {
     internal Scene3D scene;
+    
+    /// <summary> The Scene this GameObject is in </summary>
     public Scene3D GetScene => scene;
     
+    /// <summary> Whether this GameObject is enabled and should have its Update and Render methods called </summary>
     public bool enabled = true;
+    
     internal bool destroyed;
+    
+    /// <summary> Whether this GameObject is destroyed or not. Getting references on a destroyed object will give you null reference exceptions. </summary>
+    public bool IsDestroyed => destroyed;
     
     internal bool started = false;
     
@@ -20,10 +27,15 @@ public partial class GameObject
     /// <summary> The tag of this GameObject </summary>
     public string tag;
     
+    /// <summary> The Transform of this GameObject </summary>
     public Transform transform { get; internal set; }
+    
+    /// <summary> The initial Transform of this GameObject when it was created </summary>
     public Transform initialTransform { get; internal set; }
     
     internal Vector3 positionLastFrame;
+    
+    /// <summary> Get the position of this GameObject in the last frame </summary>
     public Vector3 GetPositionLastFrame() => positionLastFrame;
     
     MeshRenderer meshRenderer;
@@ -31,7 +43,7 @@ public partial class GameObject
     internal List<Collider3D> colliders = new();
     internal List<CollisionDetector> collisionDetectors = new();
     
-    
+    /// <summary> Creates a GameObject with an empty name and a default Transform (position zero, no rotation, uniform scale of 1). </summary>
     public GameObject()
     {
         transform = new Transform(Vector3.Zero, Vector3.Zero, Vector3.One);
@@ -40,6 +52,7 @@ public partial class GameObject
         transform.SetOwner(this);
     }
 
+    /// <summary> Creates a GameObject with the given name and a default Transform. </summary>
     public GameObject(string name)
     {
         transform = new Transform(Vector3.Zero, Vector3.Zero, Vector3.One);
@@ -48,6 +61,7 @@ public partial class GameObject
         transform.SetOwner(this);
     }
 
+    /// <summary> Creates a GameObject using an existing Transform instance, with an optional name. </summary>
     public GameObject(Transform transform, string name = "") 
     {
         this.transform = transform;
@@ -56,7 +70,7 @@ public partial class GameObject
         this.transform.SetOwner(this);
     }
     
-    
+    /// <summary> Creates a GameObject with a new Transform built from the given position, rotation (Euler angles, degrees) and scale, with an optional name. </summary>
     public GameObject (Vector3 position, Vector3 rotation, Vector3 scale, string name = "") : this(new Transform(position, rotation, scale), name){}
     
     // Called when this GameObject is added to the scene
@@ -112,8 +126,9 @@ public partial class GameObject
                 b.Update(deltaTime);
             }
         }
-        
-        positionLastFrame = transform.position;
+
+        if (!destroyed)
+            positionLastFrame = transform?.position ?? Vector3.Zero;
     }
     
     /// <summary> Destroys this GameObject and removes it from the scene </summary>
@@ -370,6 +385,11 @@ public partial class GameObject
 
     internal virtual void RemoveGameObjectReferences()
     {
+        foreach (Behaviour b in behaviours) 
+            b.Removed();
+        
+        scene?.collisionSystem?.RemoveCollisionObject(this);
+        
         foreach (Collider3D c in colliders)
         {
             scene?.collisionSystem?.RemoveCollider(c);
@@ -380,13 +400,11 @@ public partial class GameObject
         foreach (CollisionDetector d in collisionDetectors)
             d.SetParent(null);
         
-        scene?.collisionSystem?.RemoveCollisionObject(this);
         collisionDetectors.Clear();
         
-        foreach (Behaviour b in behaviours) 
-            b.Removed();
-        
         behaviours?.Clear();
+
+        transform = null;
         
         scene = null;
         if (meshRenderer != null)
