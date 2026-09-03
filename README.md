@@ -10,21 +10,6 @@ You can basically think of Celeste 3D Engine as **"Unity in Celeste"**.
 
 *A short 3D exploration game built entirely with the Engine for the SSC24, running inside Celeste, in pixel art*
 
----
-
-
-
-## What It Can Do
-
-Models load from both `GLTF` or `OBJ`, with skinned animation support for GLTF.
-
-Scenes are lit with one directional light and any number of Scene `Light`, with real time shadows and tunable `LightingSettings`.
-
-Physics comes from a `CollisionSystem` (box and sphere colliders, collision or trigger events) alongside `RayCasts`.
-
-UI rendering supports two types of `UICanvas`, screen space HUD or World panels that live directly in the 3D world.
-
-The Engine also supports custom fonts, custom audio source with 3D spatialization, and a persistence system that lets a scene survive Celeste room transitions.
 
 <img width="850" height="460" src="https://github.com/user-attachments/assets/59fa2d7e-8fc1-4b21-a855-1710f6a54b3c" />
 
@@ -41,7 +26,7 @@ If you don't plan on making a fully 3D game, the engine can also be integrated d
 ---
 
 
-## Read the Doc !!
+## Here's the Doc
 
 The best place to actually start is the official Documentation page :  https://eylstar.github.io/Celeste3DEngineDocumentation/ 
 
