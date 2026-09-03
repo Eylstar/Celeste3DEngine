@@ -10,10 +10,6 @@ You can basically think of Celeste 3D Engine as **"Unity in Celeste"**.
 
 *A short 3D exploration game built entirely with the Engine for the SSC24, running inside Celeste, in pixel art*
 
-<img width="850" height="460" src="https://github.com/user-attachments/assets/59fa2d7e-8fc1-4b21-a855-1710f6a54b3c" />
-
-*A 3D overworld scene with a skinned and animated character, fog and realtime shadows, in HD rendering*
-
 <img width="850" height="460" src="https://github.com/user-attachments/assets/a2501230-3eb2-4415-9b54-4c35a521b3ec" />
 
 *A simple scene with 3D cubes and spheres looping around the Celeste gameplay, both over and under the Celeste rendering*
@@ -28,7 +24,3 @@ You can basically think of Celeste 3D Engine as **"Unity in Celeste"**.
 The best place to actually start is [The Official Documentation Page](https://eylstar.github.io/Celeste3DEngineDocumentation/)
 
 And follow `Your First Project`, a full walkthrough that builds a small working scene from nothing, camera, models, physics, UI and all, step by step.
-
-<img width="850" height="460" alt="UI" src="https://github.com/user-attachments/assets/eac68aea-ac8d-4c37-a7b6-265e496e1125" />
-
-*The simple scene you're going to learn how to do in the First Project tutorial*
