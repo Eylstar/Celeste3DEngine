@@ -22,7 +22,7 @@ public class LightingSettings
     public int shadowMapResolution = 4096;
     
     /// <summary> The resolution of the shadow map for spot lights. </summary>
-    public int spotLightShadowMapResolution = 1024;
+    public int spotLightShadowMapResolution = 2048;
     
     /// <summary> The near plane distance for shadow mapping. </summary>
     public float shadowNearPlane = 0.1f;

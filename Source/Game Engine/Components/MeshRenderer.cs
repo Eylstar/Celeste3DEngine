@@ -1,7 +1,7 @@
 ﻿namespace Celeste.Mod.Celeste3DEngine;
 
 /// <summary> The GameObject component used for rendering 3D models. </summary>
-public class MeshRenderer
+public class MeshRenderer : IComponent
 {
     internal GameObject gameObject;
     
@@ -35,6 +35,9 @@ public class MeshRenderer
 
     /// <summary> Wether this model should be automatically culled (not rendered) when not in the frustum of the rendering camera. Default true </summary>
     public bool isFrustumCulled = true;
+    
+    /// <summary> Whether this Model is affected by wind. Default false </summary>
+    public bool useWind = false;
     
     /// <summary> Whether this Model is visible. Setting this to false will make the Model not render, but it will still cast shadows if castsShadows is true. Default true </summary>
     public bool isVisible = true;

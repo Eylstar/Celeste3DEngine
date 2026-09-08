@@ -45,6 +45,8 @@ internal sealed class Model3D : IDisposable
 
     LightingSettings lightSettings => EngineEntity.Current3DScene?.GetLightingSettings();
     
+    WindSettings windSettings => EngineEntity.Current3DScene?.GetWindSettings();
+    
     bool ignoreFog;
     float hudDepth = 1f;
     
@@ -311,6 +313,9 @@ internal sealed class Model3D : IDisposable
         shader.Parameters["ReceivesShadows"]?.SetValue(meshRenderer.receivesShadows ? 1f : 0f);
         shader.Parameters["ShadowSoftness"]?.SetValue(lightSettings.shadowSoftness);
         
+        
+        ApplyWindParameters(shader);
+        
         // Set parameters for ignoring fog objects (skybox and HUD)
         if (ignoreFog)
         {
@@ -351,6 +356,20 @@ internal sealed class Model3D : IDisposable
             shader.Parameters["TintColor"]?.SetValue(modelMaterial.Color);
         }
     }
+
+    void ApplyWindParameters(Effect shader)
+    {
+        shader.Parameters["ObjectWorldPos"]?.SetValue(modelTransform.position);
+        
+        shader.Parameters["UseWind"]?.SetValue(meshRenderer.useWind ? 1f : 0f);
+        shader.Parameters["WindDirection"]?.SetValue(windSettings.direction);
+        shader.Parameters["WindStrength"]?.SetValue(windSettings.strength);
+        shader.Parameters["WindFrequency"]?.SetValue(windSettings.frequency);
+        shader.Parameters["WindTime"]?.SetValue(EngineEntity.Current3DScene?.ElapsedTime ?? 0f);
+
+        float windHeightRange = objMesh != null ? objMesh.boundingSphereRadius * 2f : 0f; // Default to 10 if objMesh is null
+        shader.Parameters["WindHeightRange"]?.SetValue(windHeightRange);
+    }
     
     bool SetupSkinnedParameters(Effect shader)
     {
@@ -373,6 +392,8 @@ internal sealed class Model3D : IDisposable
             }
             
             shader.Parameters["BoneMatrices"]?.SetValue(final);
+            
+            Logger.Warn("Model3D", $"Set up skinned parameters for {count} bones in model '{meshRenderer.modelName}'");
             return true;
         }
         return false;
@@ -389,8 +410,6 @@ internal sealed class Model3D : IDisposable
 
         Matrix world = Matrix.CreateScale(modelTransform.scale) * Matrix.CreateFromQuaternion(modelTransform.rotation) * Matrix.CreateTranslation(modelTransform.position);
         
-        
-        
         lightPassShader.Parameters["World"]?.SetValue(world);
         lightPassShader.Parameters["View"]?.SetValue(renderingCamera.View);
         lightPassShader.Parameters["Projection"]?.SetValue(renderingCamera.Projection);
@@ -401,6 +420,11 @@ internal sealed class Model3D : IDisposable
         lightPassShader.Parameters["LightColor"]?.SetValue(light.color.ToVector3());
         lightPassShader.Parameters["LightIntensity"]?.SetValue(light.intensity);
         lightPassShader.Parameters["LightRange"]?.SetValue(light.range);
+        
+        // Nouveau, manquait entièrement
+        lightPassShader.Parameters["CameraPos"]?.SetValue(renderingCamera.transform.Position);
+        lightPassShader.Parameters["Shininess"]?.SetValue(modelMaterial.Shininess);
+        lightPassShader.Parameters["SpecularColor"]?.SetValue(modelMaterial.SpecularColor);
         
         // Determine if the light casts shadows and set shadow parameters
         bool castsShadows = (renderer != null && light is ConeLight c && renderer.spotLightsCastingShadows.Contains(c) && c.CastsShadows);
@@ -415,13 +439,17 @@ internal sealed class Model3D : IDisposable
             {
                 lightPassShader.Parameters["LightViewProjection"]?.SetValue(spotlightMatrix);
                 lightPassShader.Parameters["ShadowMap"]?.SetValue(renderer.spotLightShadowMaps[cl]);
+                
                 lightPassShader.Parameters["ShadowBias"]?.SetValue(lightSettings.shadowBias);
+                lightPassShader.Parameters["ShadowStrength"]?.SetValue(lightSettings.shadowStrength);
                 
                 lightPassShader.Parameters["ShadowTexelSize"]?.SetValue(new Vector2(1f / lightSettings.spotLightShadowMapResolution, 1f / lightSettings.spotLightShadowMapResolution));
                 lightPassShader.Parameters["ShadowSoftness"]?.SetValue(lightSettings.shadowSoftness); 
                 
                 lightPassShader.Parameters["NearPlane"]?.SetValue(lightSettings.shadowNearPlane);
                 lightPassShader.Parameters["FarPlane"]?.SetValue(light.range);
+                
+                lightPassShader.Parameters["DistanceAttenuationFactor"]?.SetValue(cl.ShadowDistanceAttenuation);
             }
             else
                 lightPassShader.Parameters["UseShadows"]?.SetValue(0f);
@@ -445,6 +473,8 @@ internal sealed class Model3D : IDisposable
         }
         else
             lightPassShader.Parameters["UseSpot"]?.SetValue(0f);
+        
+        ApplyWindParameters(lightPassShader);
         
         bool isSkinned = SetupSkinnedParameters(lightPassShader);
         lightPassShader.CurrentTechnique = isSkinned ? lightPassShader.Techniques["AddLightSkinned"] : lightPassShader.Techniques["AddLight"];
@@ -472,8 +502,17 @@ internal sealed class Model3D : IDisposable
 
         bool isSkinned = SetupSkinnedParameters(shadowMap);
         shadowMap.CurrentTechnique = isSkinned ? shadowMap.Techniques["ShadowDepthSkinned"] : shadowMap.Techniques["ShadowDepth"];
+        
+        shadowMap.Parameters["UseWind"]?.SetValue(1f);
+        
+        ApplyWindParameters(shadowMap);
 
-        objMesh.DrawWithSetup(shadowMap, _ => { });
+        objMesh.DrawWithSetup(shadowMap, tex =>
+        {
+            Texture2D t = tex ?? modelTexture?.Texture;
+            Engine.Graphics.GraphicsDevice.Textures[0] = t;
+            shadowMap.Parameters["DiffuseTexture"]?.SetValue(t);
+        });
     }
     
     public void Dispose()

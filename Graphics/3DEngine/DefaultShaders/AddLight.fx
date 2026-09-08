@@ -1,3 +1,8 @@
+#include "Wind.fxh"
+
+float UseWind = 0.0f;
+
+
 float4x4 World;
 float4x4 View;
 float4x4 Projection;
@@ -5,6 +10,10 @@ float4x4 WorldInverseTranspose;
 float4x4 BoneMatrices[64];
 
 texture DiffuseTexture;
+
+float  Shininess      = 16.0f;
+float3 CameraPos;
+float3 SpecularColor = float3(0.2f, 0.2f, 0.2f);
 
 float3 LightPos       = float3(0, 0, 0);
 float3 LightColor     = float3(1, 1, 1);
@@ -14,18 +23,21 @@ float  LightRange     = 10.0f;
 float UseShadows;
 float4x4 LightViewProjection;
 texture ShadowMap;
-float ShadowBias = 0.001f;
 
 float  UseSpot   = 0.0f;
 float3 LightDir  = float3(0, -1, 0);
 float  InnerCos  = 0.9f;
 float  OuterCos  = 0.8f;
 
-float ShadowBiasBase   = 0.005f;
-float ShadowBiasNormal = 0.02f;
-float ShadowBiasMin    = 0.003f;
+float ShadowBias = 0.001f;
+float ShadowBiasMin = 0.0002f;
+float ShadowBiasMax = 0.0030f;
+float ShadowNormalBias = 1.0f;
+float ShadowStrength = 1.0f;
 float2 ShadowTexelSize = float2(1.0/1024.0, 1.0/1024.0);
-float  ShadowSoftness  = 1.0f;
+float  ShadowSoftness  = 1.5f;
+
+float DistanceAttenuationFactor = 1.5f;
 
 float NearPlane;
 float FarPlane;
@@ -87,6 +99,10 @@ VSOut VSAdd(VSIn input)
 {
     VSOut o;
     float4 worldPos = mul(input.Position, World);
+    
+    if(UseWind > 0.5f)
+            worldPos.xyz = ApplyWind(input.Position.xyz, worldPos.xyz);
+            
     o.WorldPos = worldPos.xyz;
     o.NormalW  = normalize(mul(input.Normal, (float3x3)WorldInverseTranspose));
     float4 viewPos = mul(worldPos, View);
@@ -108,41 +124,78 @@ VSOut VSAddSkinned(VSInSkinned input)
     float4 viewPos = mul(worldPos, View);
     o.Position = mul(viewPos, Projection);
     o.TexCoord = input.TexCoord;
-    o.LightPos = mul(worldPos, LightViewProjection);
+    o.LightPos = mul(worldPos, LightViewProjection);    
     return o;
 }
 
-float ShadowCompare01(float2 uv, float current01, float bias)
+
+float ComputeAdaptiveShadowBias(float3 normalW, float3 lightDir)
+{
+    float ndotl = saturate(dot(normalize(normalW), normalize(lightDir)));
+    float grazing = 1.0f - ndotl;
+    float adaptiveBias = lerp(ShadowBiasMin, ShadowBiasMax, grazing * ShadowNormalBias);
+    return max(ShadowBias, adaptiveBias);
+}
+
+float ShadowCompare(float2 uv, float currentDepth01, float bias)
 {
     float stored = tex2D(ShadowS, uv).r;
-    return (current01 - bias) <= stored ? 1.0f : 0.0f;
+    return (currentDepth01 - bias) <= stored ? 1.0f : 0.0f;
 }
 
-static const float2 PoissonDisk[12] =
+float Random(float2 uv){return frac(sin(dot(uv, float2(12.9898,78.233))) * 43758.5453);}
+
+static const float2 poissonDisk[8] =
 {
-    float2(-0.326, -0.406),
-    float2(-0.840, -0.074),
-    float2(-0.696,  0.457),
-    float2(-0.203,  0.621),
-    float2( 0.962, -0.195),
-    float2( 0.473, -0.480),
-    float2( 0.519,  0.767),
-    float2( 0.185, -0.893),
-    float2( 0.507,  0.064),
-    float2( 0.896,  0.412),
-    float2(-0.322,  0.933),
-    float2(-0.792, -0.598)
+    float2(-0.94201624, -0.39906216),
+    float2( 0.94558609, -0.76890725),
+    float2(-0.09418410, -0.92938870),
+    float2( 0.34495938,  0.29387760),
+    float2(-0.91588581,  0.45771432),
+    float2(-0.81544232, -0.87912464),
+    float2(-0.38277543,  0.27676845),
+    float2( 0.97484398,  0.75648379)
 };
 
-float SampleShadowPoisson(float2 uv, float z01, float bias, float softness)
+float SampleShadowPoisson(float4 lightPos, float3 normalW, float3 lightDir, float distFactor)
 {
-    float shadow = 0.0;
-    float2 spread = ShadowTexelSize * softness;
+    if (lightPos.w <= 0.00001f) return 1.0f;
+
+    float2 ndc = lightPos.xy / lightPos.w;
+    float2 uv  = ndc * float2(0.5f, -0.5f) + 0.5f;
+
+    if (uv.x < 0 || uv.x > 1 || uv.y < 0 || uv.y > 1) return 1.0f;
+
+    float current = (lightPos.w - NearPlane) / (FarPlane - NearPlane);
+    if (current < 0 || current > 1) return 1.0f;
+
+    float bias = ComputeAdaptiveShadowBias(normalW, lightDir);
+
+    float angle = Random(uv) * 6.2831853;
+    float s = sin(angle);
+    float c = cos(angle);
+
+    float visibility = 0.0f;
+    
+    float distScale = 1.0 + saturate(distFactor) * DistanceAttenuationFactor;
+    float2 filterRadius = ShadowTexelSize * ShadowSoftness * distScale;
+
     [unroll]
-    for (int i = 0; i < 12; i++)
-        shadow += ShadowCompare01(uv + PoissonDisk[i] * spread, z01, bias);
-    return shadow / 12.0;
+    for (int i = 0; i < 8; i++)
+    {
+        float2 rotOffset = float2(
+            poissonDisk[i].x * c - poissonDisk[i].y * s,
+            poissonDisk[i].x * s + poissonDisk[i].y * c
+        );
+
+        float2 offset = rotOffset * filterRadius;
+        visibility += ShadowCompare(uv + offset, current, bias);
+    }
+
+    visibility *= (1.0f / 8.0f);
+    return lerp(1.0f, visibility, ShadowStrength);
 }
+
 
 float4 PSAdd(VSOut input) : COLOR0
 {
@@ -173,32 +226,17 @@ float4 PSAdd(VSOut input) : COLOR0
     float NdotL    = saturate(dot(N, L));
     float3 albedo  = tex2D(TextureSampler, input.TexCoord).rgb;
     float3 light   = albedo * NdotL * LightColor * (LightIntensity * finalAtt);
-
+    
+    float3 V = normalize(CameraPos - input.WorldPos);
+    float3 H = normalize(L + V);
+    float spec = pow(saturate(dot(N, H)), Shininess);
+    float3 specular = SpecularColor * spec * LightColor * (LightIntensity * finalAtt);
+    light += specular;
+    
     if (UseShadows > 0.5 && finalAtt > 0.0)
     {
-        float4 lp = input.LightPos;
-        if (lp.w > 1e-5)
-        {
-            float invW   = 1.0f / lp.w;
-            float2 ndc   = lp.xy * invW;
-            float2 uv    = ndc * float2(0.5f, -0.5f) + 0.5f;
-            float linearZ = lp.w;
-            float z01    = (linearZ - NearPlane) / (FarPlane - NearPlane);
-
-            if (uv.x >= 0 && uv.x <= 1 && uv.y >= 0 && uv.y <= 1)
-            {
-                z01 = max(z01, 0.0);
-                float ndl      = saturate(dot(N, L));
-                float bias     = ShadowBiasBase + (1.0 - ndl) * ShadowBiasNormal;
-                bias           = max(bias, ShadowBiasMin);
-                float distFactor = saturate(dist / LightRange);
-                float softness = ShadowSoftness * (1.0 + distFactor * 6.0);
-                float shadow   = SampleShadowPoisson(uv, z01, bias, softness);
-                float shadowStrength = 1.0 - distFactor * 0.7;
-                shadow = lerp(1.0, shadow, shadowStrength);
-                light *= shadow;
-            }
-        }
+        float shadow = SampleShadowPoisson(input.LightPos, N, L, normDist);
+        light *= shadow;
     }
 
     return float4(saturate(light) * 0.8f, 1.0f);

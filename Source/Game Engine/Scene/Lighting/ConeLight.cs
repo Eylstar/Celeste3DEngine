@@ -10,6 +10,9 @@ public class ConeLight : Light
     
     /// <summary> Controls how gradually the light fades toward the edge of the cone. 0 = no falloff, 1 = full falloff </summary>
     public float SpotFalloff = 0.5f;
+    
+    /// <summary> Controls how quickly the shadow's edge softens with distance. 1 = normal, higher values = faster fade </summary>
+    public float ShadowDistanceAttenuation = 1.5f;
 
     /// <summary> Whether this light casts shadows. </summary>
     public bool CastsShadows = false;

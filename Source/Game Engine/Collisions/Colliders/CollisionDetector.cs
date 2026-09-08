@@ -5,7 +5,7 @@ using Microsoft.Xna.Framework;
 namespace Celeste.Mod.Celeste3DEngine;
 
 /// <summary> Component that can be attached to a GameObject to detect collisions with other Colliders in the scene. </summary>
-public class CollisionDetector
+public class CollisionDetector : IComponent
 {
     /// <summary> Called when this detector collides with a Collider3D </summary>
     public Action<Collider3D> onCollision;

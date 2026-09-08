@@ -61,6 +61,12 @@
       </None>
     </ItemGroup>
 
+    <ItemGroup>
+      <ClInclude Include="..\Graphics\3DEngine\DefaultShaders\Wind.fxh">
+        <Link>Game Engine\Shaders\Wind.fxh</Link>
+      </ClInclude>
+    </ItemGroup>
+
     <Target Name="CopyFiles" AfterTargets="Build" Inputs="$(OutputPath)\$(AssemblyName).dll;$(OutputPath)\$(AssemblyName).pdb" Outputs="..\bin\$(AssemblyName).dll;..\bin\$(AssemblyName).pdb">
         <Copy SourceFiles="$(OutputPath)\$(AssemblyName).dll" DestinationFolder="..\bin" />
         <Copy SourceFiles="$(OutputPath)\$(AssemblyName).pdb" DestinationFolder="..\bin" />

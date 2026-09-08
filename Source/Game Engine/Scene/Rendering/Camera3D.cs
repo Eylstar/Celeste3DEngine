@@ -57,7 +57,7 @@ public class Camera3D : GameObject
     internal override void Update(float deltaTime)
     {
         base.Update(deltaTime);
-        UpdateMatrices(Engine.Viewport);
+        //UpdateMatrices(Engine.Viewport);
     }
 
     internal void UpdateMatrices(Viewport viewport)

@@ -169,7 +169,7 @@ public partial class GameObject
     
     
     /// <summary> Add a component of type T to this GameObject </summary>
-    public void AddComponent<T>(T t)
+    public void AddComponent<T>(T t) where T : class, IComponent
     {
         if (t is MeshRenderer mr)
         {
@@ -200,7 +200,7 @@ public partial class GameObject
     }
     
     /// <summary> Remove passed component from this gameobject if found </summary>
-    public void RemoveComponent<T>(T t)
+    public void RemoveComponent<T>(T t) where T : class, IComponent
     {
         if (t is MeshRenderer mr && meshRenderer == mr)
         {
@@ -224,7 +224,7 @@ public partial class GameObject
     }
     
     /// <summary> Remove the first component of type T from this GameObject </summary>
-    public void RemoveFirstFoundComponent<T>() where T : class
+    public void RemoveFirstFoundComponent<T>() where T : class, IComponent
     {
         if (typeof(T) == typeof(MeshRenderer))
         {
@@ -275,7 +275,7 @@ public partial class GameObject
     }
     
     /// <summary> Remove all components of type T from this GameObject </summary>
-    public void RemoveAllComponents<T>()
+    public void RemoveAllComponents<T>() where T : class, IComponent
     {
         if (typeof(T) == typeof(MeshRenderer))
         {
@@ -311,7 +311,7 @@ public partial class GameObject
     }
     
     /// <summary> Get the first component of type T attached to this GameObject or null </summary>
-    public virtual T GetComponent<T>() where T : class
+    public virtual T GetComponent<T>() where T : class, IComponent
     {
         if (typeof(T) == typeof(MeshRenderer)) 
             return meshRenderer as T;
@@ -330,7 +330,7 @@ public partial class GameObject
     }
     
     /// <summary> Get all components of type T attached to this GameObject </summary>
-    public virtual List<T> GetAllComponents<T> () where T : class
+    public virtual List<T> GetAllComponents<T> () where T : class, IComponent
     {
         List<T> results = new();
 
@@ -354,7 +354,7 @@ public partial class GameObject
     }
     
     /// <summary> Check if this GameObject has a component of type T attached </summary>
-    public virtual bool HasComponent<T>() where T : class
+    public virtual bool HasComponent<T>() where T : class, IComponent
     {
         if (typeof(T) == typeof(MeshRenderer)) 
             return meshRenderer != null;

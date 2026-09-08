@@ -6,7 +6,7 @@ using Monocle;
 namespace Celeste.Mod.Celeste3DEngine;
 
 /// <summary> Base class for 3D colliders </summary>
-public abstract class Collider3D
+public abstract class Collider3D : IComponent
 {
     /// <summary> Whether this collider is a trigger (does not block movement) </summary>
     public bool isTrigger;

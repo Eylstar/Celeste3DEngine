@@ -29,11 +29,15 @@ public sealed class Scene3D
     /// <summary> Gets the Renderer3D object for the scene </summary>
     public Renderer3D GetRenderer() => renderer;
     
-    // Lighting settings for the scene
     LightingSettings lightingSettings = new();
     
     /// <summary> Gets the LightingSettings used in the scene </summary>
     public LightingSettings GetLightingSettings() => lightingSettings;
+    
+    WindSettings windSettings = new();
+    
+    /// <summary> Gets the WindSettings used in the scene </summary>
+    public WindSettings GetWindSettings() => windSettings;
     
     //The list of all GameObjects currently in the scene
     HashSet<GameObject> gameObjects = new();
@@ -56,8 +60,15 @@ public sealed class Scene3D
     
     internal CollisionSystem collisionSystem = new();
     
+    float elapsedTime = 0f;
+    
+    /// <summary> Gets the total elapsed time since the scene was loaded </summary>
+    public float ElapsedTime => elapsedTime;
+    
     bool isPaused;
     bool sceneWiped;
+    
+    internal bool updatedOnce = false;
     
     /// <summary> Decides if the Colliders and Collision Detectors are shown in the scene (Wireframes) </summary>
     public bool debugShowColliders = false;
@@ -87,6 +98,8 @@ public sealed class Scene3D
         collisionSystem.Initialize(this);
         
         RenderingHooks.AddRenderer(renderer);
+        
+        elapsedTime = 0f;
         
         OnSceneLoad?.Invoke(this);
     }
@@ -148,6 +161,9 @@ public sealed class Scene3D
     
     /// <summary> Sets the lighting settings for the scene </summary>
     public void SetLightingSettings(LightingSettings settings) => lightingSettings = settings;
+    
+    /// <summary> Sets the wind settings for the scene </summary>
+    public void SetWindSettings(WindSettings settings) => windSettings = settings;
     
     /// <summary> Pauses or unpauses the scene update and render </summary>
     public void SetPause(bool pause) => isPaused = pause;
@@ -296,6 +312,10 @@ public sealed class Scene3D
         
         // Clean up destroyed GameObjects from the scene
         CleanupDestroyedObjects();
+        
+        elapsedTime += Engine.DeltaTime;
+        
+        updatedOnce = true;
     }
 
     void UpdateAudioListenerPosition()

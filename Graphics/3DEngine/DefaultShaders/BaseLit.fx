@@ -1,3 +1,7 @@
+#include "Wind.fxh"
+
+float UseWind = 0.0f;
+
 float4x4 World;
 float4x4 View;
 float4x4 Projection;
@@ -19,6 +23,9 @@ float3 EmissiveColor  = float3(0.0f, 0.0f, 0.0f);
 float EmissiveIntensity = 1.0f;
 
 float3 TintColor = float3(1.0f, 1.0f, 1.0f);
+
+
+float AlphaCutoff = 0.5f;
 
 
 float3 FogColor;
@@ -134,6 +141,7 @@ struct VSOut
     //float4 LightPosFar   : TEXCOORD4;
     float4 LightPos   : TEXCOORD3;
     float  ViewDepth     : TEXCOORD4;
+    float LocalY     : TEXCOORD5;
 };
 
 
@@ -156,6 +164,10 @@ VSOut VSBase(VSIn input)
     VSOut o;
 
     float4 worldPos = mul(input.Position, World);
+    
+    if(UseWind > 0.5f)
+        worldPos.xyz = ApplyWind(input.Position.xyz, worldPos.xyz);
+                    
     o.WorldPos = worldPos.xyz;
 
     o.NormalW = normalize(mul(input.Normal, (float3x3)WorldInverseTranspose));
@@ -170,6 +182,8 @@ VSOut VSBase(VSIn input)
     o.LightPos = mul(worldPos, LightViewProjection);
     o.ViewDepth = -viewPos.z;
     
+    o.LocalY = input.Position.y;
+    
     return o;
 }
 
@@ -183,6 +197,10 @@ VSOut VSSkinned(VSInSkinned input)
     float3 skinnedNormal = mul(input.Normal, (float3x3)skinMatrix);
     
     float4 worldPos = mul(skinnedPos, World);
+    
+    if(UseWind > 0.5f)
+            worldPos.xyz = ApplyWind(input.Position.xyz, worldPos.xyz);
+    
     o.WorldPos = worldPos.xyz;
     o.NormalW = normalize(mul(skinnedNormal, (float3x3)WorldInverseTranspose));
     
@@ -195,6 +213,8 @@ VSOut VSSkinned(VSInSkinned input)
     o.LightPos = mul(worldPos, LightViewProjection);
     
     o.ViewDepth = -viewPos.z;
+    
+    o.LocalY = input.Position.y;
     
     return o;
 }
@@ -325,7 +345,10 @@ float4 PSBase(VSOut input) : COLOR0
     
     shadow = NdotL <= 0.0f ? 0.0f : shadow;
 
-    float3 tex = tex2D(TextureSampler, input.TexCoord).rgb;
+    float4 texSample = tex2D(TextureSampler, input.TexCoord);
+    clip(texSample.a - AlphaCutoff);
+    
+    float3 tex = texSample.rgb;
     float3 albedo = tex  * TintColor;
 
     float3 color = albedo * (AmbientColor + diffuse * shadow) + specular * shadow;

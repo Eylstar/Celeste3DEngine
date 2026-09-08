@@ -1,7 +1,7 @@
 ﻿namespace Celeste.Mod.Celeste3DEngine;
 
 /// <summary> Base class for all components that can be attached to a GameObject </summary>
-public abstract class Behaviour
+public abstract class Behaviour : IComponent
 {
     /// <summary> Called when the GameObject is added to the Scene. The Scene and 3DModels may still not be loaded by tne Engine </summary>
     public virtual void Added() { }

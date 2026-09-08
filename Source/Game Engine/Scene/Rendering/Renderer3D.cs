@@ -202,6 +202,8 @@ public sealed class Renderer3D : IDisposable
         
         EnsureRenderTragetSize();
         
+        EngineEntity.Current3DScene?.GetRenderingCamera()?.UpdateMatrices(Engine.Viewport);
+        
         // Directional Light Shadow Map Rendering
         BRDirectionalLightShadowMap();
         
@@ -453,10 +455,12 @@ public sealed class Renderer3D : IDisposable
     // Renders all world models to the scene render target
     void BRWorldModels()
     {
-        Camera3D cam = EngineEntity.Current3DScene.GetRenderingCamera();
-        BoundingFrustum frustum = new BoundingFrustum(cam.View * cam.Projection);
+        Camera3D cam = EngineEntity.Current3DScene?.GetRenderingCamera();
+        if (cam == null) return;
         
-        Skybox sky = skyboxModel.gameObject as Skybox;
+        BoundingFrustum frustum = new BoundingFrustum(cam.View * cam.Projection);
+
+        Skybox sky = skyboxModel?.gameObject as Skybox;
         
         //Classic RenderTarget
         
@@ -473,8 +477,11 @@ public sealed class Renderer3D : IDisposable
 
             if (m.gameObject.GetComponent<MeshRenderer>().isFrustumCulled)
             {
+                if (m.GetMesh() == null) continue;
+                
                 Vector3 s = m.gameObject.transform.scale;
                 float max = Math.Max(s.X, Math.Max(s.Y, s.Z));
+                
                 BoundingSphere sphere = new BoundingSphere(GetWorldBoundsCenter(m), m.GetMesh().boundingSphereRadius * max);
                 if (frustum.Contains(sphere) == ContainmentType.Disjoint)
                 {
@@ -506,6 +513,8 @@ public sealed class Renderer3D : IDisposable
 
             if (m.gameObject.GetComponent<MeshRenderer>().isFrustumCulled)
             {
+                if (m.GetMesh() == null) continue;
+                
                 Vector3 s = m.gameObject.transform.scale;
                 float max = Math.Max(s.X, Math.Max(s.Y, s.Z));
                 BoundingSphere sphere = new BoundingSphere(GetWorldBoundsCenter(m), m.GetMesh().boundingSphereRadius * max);
@@ -626,7 +635,17 @@ public sealed class Renderer3D : IDisposable
         else if (enabled && !isHDMode)
             RenderScene(foregroundRenderTarget, GameplayBuffers.Level.Bounds);
     }
-    
+
+    internal void RenderBridge()
+    {
+        if (enabled)
+        {
+            Viewport vp = Engine.Graphics.GraphicsDevice.Viewport;
+            Rectangle rect = new Rectangle(vp.X, vp.Y, vp.Width, vp.Height);
+            RenderScene(sceneRenderTarget, rect);
+            RenderScene(foregroundRenderTarget, rect);
+        }
+    }
 
     // Renders the scene render target to the screen
     void RenderScene(RenderTarget2D target, Rectangle rect)
