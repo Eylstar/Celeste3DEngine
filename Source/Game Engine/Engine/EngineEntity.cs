@@ -27,7 +27,7 @@ public sealed class EngineEntity : Entity
     
     internal static Scene3D Current3DScene;
     
-    GlobalSceneRenderer globalRenderer;
+    //GlobalSceneRenderer globalRenderer;
 
     /// <summary> Gets the current celeste Scene </summary>
     public static Scene GetCelesteScene => instance?.Scene ?? null;
@@ -78,12 +78,12 @@ public sealed class EngineEntity : Entity
         IndempotentLoad();
         OnEngineLoad?.Invoke(this, scene);
 
-        if (!(scene is Level))
+        /*if (!(scene is Level))
         {
             Logger.Info("EngineEntity", "EngineEntity is not in a Level scene, fallback on a Monocle Renderer.");
             globalRenderer = new GlobalSceneRenderer();
             scene.RendererList.Add(globalRenderer);
-        }
+        }*/
     }
 
     internal void IndempotentLoad()
@@ -157,8 +157,8 @@ public sealed class EngineEntity : Entity
         base.Removed(scene);
         if (instance == this && !persistent)
         {
-            if (!(scene is Level))
-                scene.RendererList.Remove(globalRenderer);
+            //if (!(scene is Level))
+                //scene.RendererList.Remove(globalRenderer);
             
             SaveEngineState(scene);
             CleanEngine();
@@ -170,8 +170,8 @@ public sealed class EngineEntity : Entity
         base.SceneEnd(scene);
         if (instance == this)
         {
-            if (!(scene is Level))
-                scene.RendererList.Remove(globalRenderer);
+            //if (!(scene is Level))
+                //scene.RendererList.Remove(globalRenderer);
             
             SaveEngineState(scene);
             CleanEngine();
