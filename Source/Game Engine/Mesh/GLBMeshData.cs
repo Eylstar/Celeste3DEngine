@@ -112,7 +112,10 @@ internal sealed class GLBMeshData : MeshData
                 // Buffers and texture for this primitive
                 VertexBuffer vertBuffer;
                 IndexBuffer indexBuffer;
-                uint[] indexArray;
+                
+                ushort[] indexArray16 = null;
+                uint[] indexArray32 = null;
+                bool use32BitIndices = false;
                 
                 Texture2D t = ExtractTexture(gltfPrim, loadedTextures);
                 
@@ -154,10 +157,6 @@ internal sealed class GLBMeshData : MeshData
                 // Convert vertex and index data to GPU buffers
                 void BindGPUValues()
                 {
-                    indexArray = new uint[indices.Count];
-                    for (int i = 0; i < indices.Count; i++)
-                        indexArray[i] = indices[i];
-                    
                     if (isSkinned)
                     {
                         vertBuffer = new VertexBuffer(device, SkinnedVertex.VertexDeclaration, skinnedVertices.Length, BufferUsage.None);
@@ -169,9 +168,29 @@ internal sealed class GLBMeshData : MeshData
                         vertBuffer.SetData(staticVertices);
                     }
                     
-                    indexBuffer = new IndexBuffer(device, IndexElementSize.ThirtyTwoBits, indexArray.Length, BufferUsage.None);
-                    indexBuffer.SetData(indexArray);
                     
+                    int vertexCount = isSkinned ? skinnedVertices.Length : staticVertices.Length;
+                    
+                    if (vertexCount <= ushort.MaxValue + 1)
+                    {
+                        indexArray16 = new ushort[indices.Count];
+                        for (int i = 0; i < indices.Count; i++)
+                            indexArray16[i] =checked((ushort)indices[i]);
+                        
+                        indexBuffer = new IndexBuffer(device, IndexElementSize.SixteenBits, indexArray16.Length, BufferUsage.None);
+                        indexBuffer.SetData(indexArray16);
+                        use32BitIndices = false;
+                    }
+                    else
+                    {
+                        indexArray32 = new uint[indices.Count];
+                        for (int i = 0; i < indices.Count; i++)
+                            indexArray32[i] = indices[i];
+                        
+                        indexBuffer = new IndexBuffer(device, IndexElementSize.ThirtyTwoBits, indexArray32.Length, BufferUsage.None);
+                        indexBuffer.SetData(indexArray32);
+                        use32BitIndices = true;
+                    }
                 }
 
                 // Create a CustomPrimitive or SkinnedPrimitive, and add it to the mesh data's primitives list
@@ -198,7 +217,7 @@ internal sealed class GLBMeshData : MeshData
                             texture = t,
                             inverseBindMatrices = invBindMatrices,
                             nodeIndices = nodeIndices,
-                            indexCount = indexArray.Length
+                            indexCount = use32BitIndices ? indexArray32.Length : indexArray16.Length
                         };
                         meshData.primitives.Add(prim);
                     }
@@ -208,7 +227,7 @@ internal sealed class GLBMeshData : MeshData
                         {
                             vertBuffer = vertBuffer,
                             indexBuffer = indexBuffer,
-                            indexCount = indexArray.Length,
+                            indexCount = use32BitIndices ? indexArray32.Length : indexArray16.Length,
                             texture = t
                         };
                         meshData.primitives.Add(prim);

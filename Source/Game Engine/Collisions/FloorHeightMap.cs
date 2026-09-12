@@ -49,8 +49,12 @@ public class FloorHeightMap
             return null;
         }
         MeshData objMesh = obj.GetComponent<MeshRenderer>().GetModel()?.GetMesh();
-        
-        if (objMesh == null) return null;
+
+        if (objMesh == null)
+        {
+            Logger.Warn("FloorHeightMap", $"GameObject '{obj.name}' does not have a valid mesh. Cannot build heightmap.");
+            return null;
+        }
         
         Transform t = obj.transform;
         Matrix worldMatrix = Matrix.CreateScale(t.scale) * 

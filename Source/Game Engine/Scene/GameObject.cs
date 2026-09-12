@@ -38,7 +38,7 @@ public partial class GameObject
     /// <summary> Get the position of this GameObject in the last frame </summary>
     public Vector3 GetPositionLastFrame() => positionLastFrame;
     
-    MeshRenderer meshRenderer;
+    internal MeshRenderer meshRenderer;
     internal List<Behaviour> behaviours = new();
     internal List<Collider3D> colliders = new();
     internal List<CollisionDetector> collisionDetectors = new();
@@ -79,6 +79,9 @@ public partial class GameObject
         this.scene = s;
         foreach (Behaviour b in behaviours) 
             b.Added();
+        
+        if(meshRenderer != null)
+            scene.GetRenderer()?.AddModel(this);
     }
     
     // Called once when the scene starts or before the first Update of this GameObject
@@ -86,8 +89,8 @@ public partial class GameObject
     {
         started = true;
         
-        if(meshRenderer != null)
-            scene.GetRenderer()?.AddModel(this);
+        //if(meshRenderer != null)
+            //scene.GetRenderer()?.AddModel(this);
         
         // Ensure colliders are registered in the collision system
         foreach (Collider3D col in colliders)

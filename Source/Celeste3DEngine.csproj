@@ -59,12 +59,9 @@
       <None Include="..\Graphics\3DEngine\DefaultShaders\WorldText.fx">
         <Link>Game Engine\Shaders\WorldText.fx</Link>
       </None>
-    </ItemGroup>
-
-    <ItemGroup>
-      <ClInclude Include="..\Graphics\3DEngine\DefaultShaders\Wind.fxh">
+      <None Include="..\Graphics\3DEngine\DefaultShaders\Wind.fxh">
         <Link>Game Engine\Shaders\Wind.fxh</Link>
-      </ClInclude>
+      </None>
     </ItemGroup>
 
     <Target Name="CopyFiles" AfterTargets="Build" Inputs="$(OutputPath)\$(AssemblyName).dll;$(OutputPath)\$(AssemblyName).pdb" Outputs="..\bin\$(AssemblyName).dll;..\bin\$(AssemblyName).pdb">

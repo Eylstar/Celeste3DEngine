@@ -9,10 +9,10 @@ public class WindSettings
     public Vector3 direction = new Vector3(1, 0, 0);
     
     /// <summary> Strength of the wind. </summary>
-    public float strength = 0.75f;
+    public float strength = 1f;
     
     /// <summary> Frequency of the wind. </summary>
-    public float frequency = 1.5f;
+    public float frequency = 0.5f;
     
     /// <summary> Sets the wind direction. </summary>
     public void SetWindDirectionYaw(float yawDegrees)

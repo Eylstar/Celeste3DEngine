@@ -39,6 +39,9 @@ public class MeshRenderer : IComponent
     /// <summary> Whether this Model is affected by wind. Default false </summary>
     public bool useWind = false;
     
+    /// <summary> The multiplier for the wind effect on this Model. Default 1 </summary>
+    public float windMultiplier = 1f;
+    
     /// <summary> Whether this Model is visible. Setting this to false will make the Model not render, but it will still cast shadows if castsShadows is true. Default true </summary>
     public bool isVisible = true;
     

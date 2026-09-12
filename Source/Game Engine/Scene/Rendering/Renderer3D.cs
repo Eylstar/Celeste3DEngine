@@ -536,19 +536,20 @@ public sealed class Renderer3D : IDisposable
 
     void ApplyLightToModels(List<Model3D> models)
     {
-        if (models.Count == 0) return;
+        if (models.Count == 0 || LightsList.Count == 0) return;
         
         GraphicsDevice device = Engine.Graphics.GraphicsDevice;
         
         device.DepthStencilState = DepthStencilState.DepthRead;
         device.RasterizerState = RasterizerState.CullNone;
         device.BlendState = BlendState.Additive;
-        
-        List<Model3D> litModels = models.FindAll(m => 
-            m.gameObject.enabled && 
-            m.gameObject.GetComponent<MeshRenderer>() != null &&
-            m.gameObject.GetComponent<MeshRenderer>().material.isLit && 
-            m.gameObject.GetComponent<MeshRenderer>().isVisible);
+
+        List<Model3D> litModels = models.FindAll(m =>
+        {
+            MeshRenderer mr = m.gameObject.GetComponent<MeshRenderer>();
+            return (m.gameObject.enabled && mr != null && mr.material.isLit && mr.isVisible);
+        });
+            
 
         foreach (Light light in LightsList)
         {

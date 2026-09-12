@@ -28,6 +28,9 @@ public sealed class EngineEntity : Entity
     internal static Scene3D Current3DScene;
     
     GlobalSceneRenderer globalRenderer;
+
+    /// <summary> Gets the current celeste Scene </summary>
+    public static Scene GetCelesteScene => instance?.Scene ?? null;
     
     /// <summary> Event invoked when the EngineEntity is added to a scene </summary>
     public delegate void EngineLoadDelegate(EngineEntity engine, Scene scene);
