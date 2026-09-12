@@ -141,7 +141,6 @@ struct VSOut
     //float4 LightPosFar   : TEXCOORD4;
     float4 LightPos   : TEXCOORD3;
     float  ViewDepth     : TEXCOORD4;
-    float LocalY     : TEXCOORD5;
 };
 
 
@@ -181,9 +180,7 @@ VSOut VSBase(VSIn input)
     //o.LightPosFar  = mul(worldPos, LightViewProjectionFar);
     o.LightPos = mul(worldPos, LightViewProjection);
     o.ViewDepth = -viewPos.z;
-    
-    o.LocalY = input.Position.y;
-    
+        
     return o;
 }
 
@@ -213,9 +210,7 @@ VSOut VSSkinned(VSInSkinned input)
     o.LightPos = mul(worldPos, LightViewProjection);
     
     o.ViewDepth = -viewPos.z;
-    
-    o.LocalY = input.Position.y;
-    
+        
     return o;
 }
 
