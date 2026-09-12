@@ -301,14 +301,13 @@ public sealed class Scene3D
         
         // Update the AudioListener position
         UpdateAudioListenerPosition();
-
-        
-        // Prepare the renderer for this frame
-        renderer.BeforeRender();
         
         // Update collision system and resolve collisions
         collisionSystem.FlushDirtyColliders();
         collisionSystem.ResolveCollisions();
+        
+        // Prepare the renderer for this frame
+        renderer.BeforeRender();
         
         // Clean up destroyed GameObjects from the scene
         CleanupDestroyedObjects();

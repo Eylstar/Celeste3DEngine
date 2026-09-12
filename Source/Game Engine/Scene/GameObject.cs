@@ -180,7 +180,8 @@ public partial class GameObject
                 scene?.GetRenderer()?.RemoveModelFromLists(this);
             meshRenderer = mr;
             meshRenderer.gameObject = this;
-            if (started)
+            
+            if (scene != null)
                 scene?.GetRenderer()?.AddModel(this);
         }
         else if (t is Behaviour b)
